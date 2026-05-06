@@ -53,8 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const q = firestore.query(
                 firestore.collection(db, "pd_transactions"),
                 firestore.where("employeeName", "==", employeeName),
-                firestore.where("commissionCleared", "==", false),
-                firestore.where("type", "==", "sale")
+                firestore.where("commissionCleared", "==", false)
             );
             const snapshot = await firestore.getDocs(q);
             let totalCommission = 0;

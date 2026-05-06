@@ -450,10 +450,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     employeeName: empName,
                     items,
                     totalRevenue: 0,
-                    totalEmpCommission: 0,
-                    totalBizCut: totalPayout,
+                    totalEmpCommission: totalPayout,
+                    totalBizCut: 0,
                     totalPayout,
-                    commissionCleared: true, // purchases don't affect employee commission
+                    commissionCleared: false,
                     createdAt: firestore.serverTimestamp()
                 });
                 if (buySellStatus) { buySellStatus.textContent = `✅ Purchase logged! Paid customer: $${totalPayout.toLocaleString()}`; buySellStatus.style.color = '#48bb78'; }

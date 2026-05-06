@@ -302,8 +302,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Get all uncleared sale transactions
                 const txQuery = firestore.query(
                     firestore.collection(db, "pd_transactions"),
-                    firestore.where("commissionCleared", "==", false),
-                    firestore.where("type", "==", "sale")
+                    firestore.where("commissionCleared", "==", false)
                 );
                 const txSnap = await firestore.getDocs(txQuery);
 
