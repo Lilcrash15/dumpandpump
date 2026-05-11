@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
         { id: 'toilet_seal',     name: 'Toilet Seal',    img: 'toiletsealpng.png', price: 1000,  bizCut: 100,   empCut: 900,  desc: '$1,000 | Your cut: $900' },
         { id: 'lighter',         name: 'D&P Lighter',    img: 'lighter.png',       price: 500,   bizCut: 100,   empCut: 400,  desc: '$500 | Your cut: $400' },
         { id: 'keychain',        name: 'D&P Keychain',   img: 'keychain.png',      price: 500,   bizCut: 100,   empCut: 400,  desc: '$500 | Your cut: $400' },
-        { id: 'bag_of_compost',  name: 'Bag of Compost', img: 'compost.png',       price: 4000,  bizCut: 1000,  empCut: 3000, desc: '$4,000 | Your cut: $3,000' },
+        { id: 'bag_of_compost',  name: 'Bag of Compost', img: 'compost.png',       price: 4000,  bizCut: 3000,  empCut: 1000, desc: '$4,000 | Your cut: $1,000' },
     ];
 
     // Buy items (business buys from customers)
