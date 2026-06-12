@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Buy items (business buys from customers)
     const BUY_ITEMS = [
-        { id: 'bag_of_trash', name: 'Bag of Trash', img: 'trash.png', price: 150 }
+        { id: 'bag_of_trash', name: 'Bag of Trash', img: 'trash.png', price: 160 }
     ];
 
     // ===== FIREBASE BYPASS MODE =====
