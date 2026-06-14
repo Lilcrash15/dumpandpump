@@ -434,12 +434,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const empId = currentEmployee?.id || localStorage.getItem('loggedInEmployeeId') || '';
 
             let totalPayout = 0;
+            let totalEmpCommission = 0;
             const items = [];
             for (const [id, qty] of Object.entries(buySellCart)) {
                 const item = BUY_ITEMS.find(i => i.id === id);
                 if (!item || qty <= 0) continue;
                 totalPayout += item.price * qty;
-                items.push({ itemId: item.id, itemName: item.name, qty, unitPrice: item.price, lineTotal: item.price * qty });
+                totalEmpCommission += (item.empCut ?? item.price) * qty;
+                items.push({ itemId: item.id, itemName: item.name, qty, unitPrice: item.price, unitEmpCut: item.empCut ?? item.price, lineTotal: item.price * qty, lineEmpCommission: (item.empCut ?? item.price) * qty });
             }
 
             buySellCheckoutBtn.disabled = true;
@@ -452,7 +454,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     employeeName: empName,
                     items,
                     totalRevenue: 0,
-                    totalEmpCommission: totalPayout,
+                    totalEmpCommission: totalEmpCommission,
                     totalBizCut: 0,
                     totalPayout,
                     commissionCleared: false,
