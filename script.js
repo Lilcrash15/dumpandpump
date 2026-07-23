@@ -330,16 +330,20 @@ document.addEventListener('DOMContentLoaded', () => {
             if (Object.keys(posCart).length === 0) { alert("Cart is empty."); return; }
             const empName = currentEmployee?.fullName || localStorage.getItem('loggedInEmployeeName') || 'Unknown';
             const empId = currentEmployee?.id || localStorage.getItem('loggedInEmployeeId') || '';
+            const isOwner = (currentEmployee?.rank || '') === 'Owner';
 
             let totalRevenue = 0, totalEmpCommission = 0, totalBizCut = 0;
             const items = [];
             for (const [id, qty] of Object.entries(posCart)) {
                 const prod = PRODUCTS.find(p => p.id === id);
                 if (!prod || qty <= 0) continue;
+                const empCut = isOwner ? 0 : prod.empCut;
+                // Owners take no commission — their cut rolls into the business cut instead
+                const bizCut = isOwner ? (prod.bizCut + prod.empCut) : prod.bizCut;
                 totalRevenue += prod.price * qty;
-                totalEmpCommission += prod.empCut * qty;
-                totalBizCut += prod.bizCut * qty;
-                items.push({ productId: prod.id, productName: prod.name, qty, unitPrice: prod.price, unitEmpCut: prod.empCut, unitBizCut: prod.bizCut, lineTotal: prod.price * qty, lineEmpCommission: prod.empCut * qty });
+                totalEmpCommission += empCut * qty;
+                totalBizCut += bizCut * qty;
+                items.push({ productId: prod.id, productName: prod.name, qty, unitPrice: prod.price, unitEmpCut: empCut, unitBizCut: bizCut, lineTotal: prod.price * qty, lineEmpCommission: empCut * qty });
             }
 
             posCheckoutBtn.disabled = true;
@@ -432,6 +436,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (Object.keys(buySellCart).length === 0) { alert("Nothing in cart."); return; }
             const empName = currentEmployee?.fullName || localStorage.getItem('loggedInEmployeeName') || 'Unknown';
             const empId = currentEmployee?.id || localStorage.getItem('loggedInEmployeeId') || '';
+            const isOwner = (currentEmployee?.rank || '') === 'Owner';
 
             let totalPayout = 0;
             let totalEmpCommission = 0;
@@ -439,9 +444,10 @@ document.addEventListener('DOMContentLoaded', () => {
             for (const [id, qty] of Object.entries(buySellCart)) {
                 const item = BUY_ITEMS.find(i => i.id === id);
                 if (!item || qty <= 0) continue;
+                const empCut = isOwner ? 0 : (item.empCut ?? item.price);
                 totalPayout += item.price * qty;
-                totalEmpCommission += (item.empCut ?? item.price) * qty;
-                items.push({ itemId: item.id, itemName: item.name, qty, unitPrice: item.price, unitEmpCut: item.empCut ?? item.price, lineTotal: item.price * qty, lineEmpCommission: (item.empCut ?? item.price) * qty });
+                totalEmpCommission += empCut * qty;
+                items.push({ itemId: item.id, itemName: item.name, qty, unitPrice: item.price, unitEmpCut: empCut, lineTotal: item.price * qty, lineEmpCommission: empCut * qty });
             }
 
             buySellCheckoutBtn.disabled = true;
@@ -508,7 +514,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (typeof checkEmployeeSession === 'function' && checkEmployeeSession()) {
                 const empId = localStorage.getItem('loggedInEmployeeId');
                 const empName = localStorage.getItem('loggedInEmployeeName');
-                currentEmployee = { id: empId, fullName: empName, isManager: typeof checkManagerSession === 'function' && checkManagerSession() };
+                const storedEmp = loginEmployeeList.find(e => e.id === empId);
+                currentEmployee = storedEmp || { id: empId, fullName: empName, isManager: typeof checkManagerSession === 'function' && checkManagerSession() };
                 showAppContent();
             }
             hideLoadingScreen();
