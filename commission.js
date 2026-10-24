@@ -20,10 +20,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const mainContent = document.getElementById('commission-main-content');
     const detailsContainer = document.getElementById('commission-details-container');
     const employeeNameDisplay = document.getElementById('selected-employee-name');
+    const initialsDisplay = document.getElementById('commission-initials');
     const totalCommissionDisplay = document.getElementById('total-commission-owed');
     const transactionCountDisplay = document.getElementById('transaction-count');
     const playerIdDisplay = document.getElementById('employee-player-id');
     const statusMessage = document.getElementById('commission-status-message');
+
+    function setStatus(text, kind) {
+        statusMessage.textContent = text;
+        statusMessage.classList.remove('ok', 'err');
+        statusMessage.style.color = '';
+        if (kind === 'ok' || kind === 'err') statusMessage.classList.add(kind);
+        if (kind === 'warn') statusMessage.style.color = 'var(--amber)';
+    }
 
     function updateView(isLoggedIn) {
         if (isLoggedIn) {
@@ -39,15 +48,12 @@ document.addEventListener('DOMContentLoaded', () => {
     async function fetchCommission(employeeName, employeeData) {
         if (!employeeName) { detailsContainer.style.display = 'none'; return; }
         employeeNameDisplay.textContent = employeeName;
-        totalCommissionDisplay.textContent = 'Loading...';
+        if (initialsDisplay) initialsDisplay.textContent = initials(employeeName);
+        totalCommissionDisplay.textContent = '…';
         detailsContainer.style.display = 'block';
-        statusMessage.textContent = '';
+        setStatus('');
 
-        if (employeeData?.playerId) {
-            playerIdDisplay.textContent = employeeData.playerId;
-        } else {
-            playerIdDisplay.textContent = employeeData?.playerID || '—';
-        }
+        playerIdDisplay.textContent = employeeData?.playerId || employeeData?.playerID || '—';
 
         try {
             const q = firestore.query(
@@ -67,22 +73,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            totalCommissionDisplay.textContent = `$${totalCommission.toLocaleString()}`;
-            totalCommissionDisplay.style.color = totalCommission > 0 ? '#d4a847' : '#48bb78';
+            totalCommissionDisplay.textContent = money(totalCommission);
+            totalCommissionDisplay.style.color = totalCommission > 0 ? 'var(--amber)' : 'var(--green)';
             if (transactionCountDisplay) transactionCountDisplay.textContent = count;
 
             if (totalCommission <= 0) {
-                statusMessage.textContent = '✅ No outstanding commission — you\'re all paid up!';
-                statusMessage.style.color = '#48bb78';
+                setStatus('✅ No outstanding commission — you\'re all paid up!', 'ok');
             } else {
-                statusMessage.textContent = `You have $${totalCommission.toLocaleString()} in commission ready to be paid out.`;
-                statusMessage.style.color = '#d4a847';
+                setStatus(`You have ${money(totalCommission)} in commission ready to be paid out.`, 'warn');
             }
         } catch (err) {
             console.error("Error fetching commission:", err);
             totalCommissionDisplay.textContent = 'Error';
-            statusMessage.textContent = 'Error loading data. Check console (F12) — a Firestore index may be required.';
-            statusMessage.style.color = '#fc8181';
+            setStatus('Error loading data. Check console (F12) — a Firestore index may be required.', 'err');
         }
     }
 
@@ -92,7 +95,6 @@ document.addEventListener('DOMContentLoaded', () => {
         db = firebaseDetail.db;
         firestore = firebaseDetail.functions;
 
-        // Load employees for login select
         let employeeList = [];
         try {
             const q = firestore.query(firestore.collection(db, "pd_employees"), firestore.orderBy("fullName"));
@@ -111,8 +113,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             loginSelect.addEventListener('change', () => {
                 if (loginSelect.value) {
-                    passwordGroup.style.display = 'block';
-                    loginSubmitBtn.style.display = 'block';
+                    passwordGroup.style.display = 'flex';
+                    loginSubmitBtn.style.display = 'flex';
                     passwordInput.value = '';
                     passwordInput.focus();
                     loginError.style.display = 'none';
@@ -141,7 +143,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Check if already logged in
         if (typeof checkEmployeeSession === 'function' && checkEmployeeSession()) {
             updateView(true);
             const empName = localStorage.getItem('loggedInEmployeeName');
@@ -163,13 +164,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (FIREBASE_BYPASS) {
         executeAppLogic(buildBypassFirebase());
+    } else if (window.isFirebaseReady && window.db && window.firestoreFunctions) {
+        // Firebase usually finishes before this script runs — start right away instead of waiting on the timeout
+        processed = true;
+        executeAppLogic({ db: window.db, functions: window.firestoreFunctions });
     } else {
         document.addEventListener('firebaseReady', (e) => { if (!processed) { processed = true; executeAppLogic(e.detail); } });
         document.addEventListener('firebaseError', () => { if (!processed) { processed = true; hideLoadingScreen(); } });
         setTimeout(() => {
             if (!processed) {
+                processed = true;
                 if (window.isFirebaseReady && window.db) executeAppLogic({ db: window.db, functions: window.firestoreFunctions });
-                else { processed = true; hideLoadingScreen(); }
+                else hideLoadingScreen();
             }
         }, 3500);
     }

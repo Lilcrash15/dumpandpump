@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manager Portal - Pump & Dump</title>
+    <link rel="icon" type="image/png" href="Logo.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="pump.css">
 
     <script type="module">
@@ -37,36 +41,32 @@
 <body class="htmlbackground">
     <div id="loading-overlay">
         <div class="loading-content">
+            <img src="Logo.png" alt="" class="loading-logo">
             <div class="spinner"></div>
-            <p>Loading Manager Portal...</p>
+            <p>Loading Manager Portal</p>
         </div>
     </div>
 
-    <div class="navbar">
-        <div class="dropdown">
-            <button class="logo-container">
-                <img src="Logo.png" alt="">
-            </button>
-            <div class="dropdown-content">
-                <a href="index.html">Home / POS</a>
-                <a href="commission.html">My Commission</a>
-                <a href="manager.html">Manager Portal</a>
-            </div>
+    <nav class="navbar">
+        <a href="index.html" class="nav-brand">
+            <img src="Logo.png" alt="Pump & Dump logo">
+            <span class="nav-brand-text"><strong>Pump &amp; Dump</strong><small>Manager Portal</small></span>
+        </a>
+        <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+        <div class="nav-links">
+            <a href="index.html">POS</a>
+            <a href="commission.html">My Commission</a>
+            <a href="manager.html">Manager Portal</a>
         </div>
-    </div>
+    </nav>
 
-    <div class="page-content-wrapper">
-        <header>
-            <div class="brand-header">
-                <h1>PUMP & DUMP</h1>
-                <p class="brand-tagline">Manager Portal</p>
-            </div>
-        </header>
+    <main class="page-content-wrapper">
 
         <!-- MANAGER LOGIN CARD -->
         <div id="manager-login-wrapper" class="login-card">
+            <img src="Logo.png" alt="" class="login-logo">
             <div class="login-card-header">
-                <h2 class="login-card-title">🔑 Manager Login</h2>
+                <h1 class="login-card-title">Manager Login</h1>
                 <p class="login-card-subtitle">Manager access only</p>
             </div>
             <form id="manager-page-login-form" class="login-form">
@@ -80,140 +80,261 @@
                     <label for="manager-page-password">Password</label>
                     <input type="password" id="manager-page-password" autocomplete="current-password" placeholder="Enter your password">
                 </div>
-                <button type="submit" id="manager-login-submit-btn" class="login-btn" style="display:none;">Login</button>
+                <button type="submit" id="manager-login-submit-btn" class="login-btn" style="display:none;">Sign In</button>
             </form>
             <p id="manager-page-login-error" class="login-error" style="display:none;">Incorrect password or not authorized as manager.</p>
-
-            <!-- Backdoor link (barely visible) -->
             <p class="backdoor-link" id="backdoor-trigger" title="">· · ·</p>
         </div>
 
         <!-- MANAGER CONTENT -->
-        <div id="manager-content" style="display:none; width:100%;">
-            <div class="manager-container">
+        <div id="manager-content" style="display:none;">
+            <div class="page-header">
+                <span class="eyebrow">Manager Portal</span>
+                <h1>Welcome back, <span id="manager-welcome-name">Manager</span></h1>
+            </div>
 
-                <!-- EMPLOYEE MANAGEMENT -->
-                <div class="employee-management-section content-block">
-                    <h2>👥 Manage Employees</h2>
-                    <div id="employee-form-container" class="add-employee-form">
-                        <h3 id="employee-form-title">Add New Employee</h3>
+            <!-- QUICK STATS -->
+            <div class="stat-row">
+                <div class="stat">
+                    <div class="stat-label">Commission Owed</div>
+                    <div class="stat-value text-warn" id="stat-outstanding">—</div>
+                    <div class="stat-hint" id="stat-outstanding-hint">across all staff</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Total Sales</div>
+                    <div class="stat-value" id="stat-revenue">—</div>
+                    <div class="stat-hint" id="stat-revenue-hint">all time</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Business Cut</div>
+                    <div class="stat-value text-ok" id="stat-bizcut">—</div>
+                    <div class="stat-hint">all time</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Compost In Stock</div>
+                    <div class="stat-value" id="stat-compost">—</div>
+                    <div class="stat-hint">bags</div>
+                </div>
+            </div>
+
+            <!-- TABS -->
+            <div class="tab-bar" role="tablist">
+                <button class="active" data-tab="employees">👥 Employees</button>
+                <button data-tab="commission">💸 Commission</button>
+                <button data-tab="shiftnote">📋 Shift Note</button>
+                <button data-tab="inventory">🌱 Inventory</button>
+                <button data-tab="transactions">🧾 Transactions</button>
+                <button data-tab="paylog">✅ Payment Log</button>
+            </div>
+
+            <!-- EMPLOYEES -->
+            <div class="tab-panel active" data-panel="employees">
+                <div class="two-col">
+                    <div class="content-block" id="employee-form-container">
+                        <div class="panel-head">
+                            <div>
+                                <h2 id="employee-form-title">Add New Employee</h2>
+                                <p>Each employee gets their own POS login.</p>
+                            </div>
+                        </div>
                         <input type="hidden" id="edit-employee-id">
-                        <div class="form-group">
-                            <label for="employee-full-name">Full Name:</label>
-                            <input type="text" id="employee-full-name" placeholder="Full Name" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="employee-player-id">Player ID:</label>
-                            <input type="text" id="employee-player-id" placeholder="In-game Player ID">
-                        </div>
-                        <div class="form-group">
-                            <label for="employee-rank-select">Rank:</label>
-                            <select id="employee-rank-select">
-                                <option value="Employee">Employee</option>
-                                <option value="Senior Employee">Senior Employee</option>
-                                <option value="Manager">Manager</option>
-                                <option value="Owner">Owner</option>
-                            </select>
-                        </div>
-                        <div class="form-group" style="flex-direction:row; align-items:center; gap:12px;">
-                            <input type="checkbox" id="employee-is-manager" style="width:20px; height:20px; cursor:pointer; accent-color:#d4a847;">
-                            <label for="employee-is-manager" style="margin-bottom:0; cursor:pointer; color:#d4a847; font-weight:bold;">
-                                ✅ Grant Manager Access (can access Manager Portal & mark commissions paid)
+                        <div class="form-grid">
+                            <div class="form-group span-2">
+                                <label for="employee-full-name">Full Name</label>
+                                <input type="text" id="employee-full-name" placeholder="First Last" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="employee-player-id">Player ID</label>
+                                <input type="text" id="employee-player-id" placeholder="In-game Player ID">
+                            </div>
+                            <div class="form-group">
+                                <label for="employee-rank-select">Rank</label>
+                                <select id="employee-rank-select">
+                                    <option value="Employee">Employee</option>
+                                    <option value="Senior Employee">Senior Employee</option>
+                                    <option value="Manager">Manager</option>
+                                    <option value="Owner">Owner</option>
+                                </select>
+                            </div>
+                            <div class="form-group span-2">
+                                <label for="new-employee-password">Login Password</label>
+                                <input type="text" id="new-employee-password" placeholder="Set employee's login password">
+                            </div>
+                            <label class="check-row span-2" for="employee-is-manager">
+                                <input type="checkbox" id="employee-is-manager">
+                                <div>
+                                    <strong>Grant manager access</strong>
+                                    <span>Can open the Manager Portal, post shift notes and mark commission paid.</span>
+                                </div>
                             </label>
                         </div>
-                        <div class="form-group">
-                            <label for="new-employee-password">Login Password:</label>
-                            <input type="text" id="new-employee-password" placeholder="Set employee's login password">
+                        <div class="form-actions" style="margin-top:16px;">
+                            <button type="button" id="save-employee-button" class="action-button btn-primary">💾 Save Employee</button>
+                            <button type="button" id="cancel-edit-button" class="action-button" style="display:none;">Cancel</button>
                         </div>
-                        <div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;">
-                            <button type="button" id="save-employee-button" class="action-button checkout-button">💾 Save Employee</button>
-                            <button type="button" id="cancel-edit-button" class="action-button clear-cart-btn" style="display:none;">Cancel</button>
-                        </div>
-                        <p id="employee-status-message" style="margin-top:10px; font-weight:600;"></p>
+                        <p id="employee-status-message" class="status-text" style="margin-top:10px;"></p>
                     </div>
 
-                    <h3 style="margin-top:24px;">Employee List</h3>
-                    <div id="employee-list-display">
-                        <p class="loading-message">Loading employees...</p>
+                    <div class="content-block">
+                        <div class="panel-head">
+                            <div>
+                                <h2>Employee List</h2>
+                                <p id="employee-count-label">Loading...</p>
+                            </div>
+                        </div>
+                        <div id="employee-list-display">
+                            <p class="loading-message">Loading employees...</p>
+                        </div>
                     </div>
                 </div>
+            </div>
 
-                <!-- COMMISSION PAYOUTS -->
+            <!-- COMMISSION -->
+            <div class="tab-panel" data-panel="commission">
                 <div class="content-block" id="commission-summary-section">
-                    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
-                        <h2 style="margin:0; border-bottom:none;">💸 Outstanding Commission</h2>
+                    <div class="panel-head">
+                        <div>
+                            <h2>Outstanding Commission</h2>
+                            <p>Pay staff in game, then mark them paid here.</p>
+                        </div>
                         <div style="display:flex; align-items:center; gap:12px;">
-                            <span id="commission-summary-last-updated" style="font-size:0.8rem; color:#6a5030;">Not yet loaded</span>
-                            <button id="commission-summary-refresh-btn" class="action-button" style="padding:6px 14px; font-size:0.85rem;">⟳ Refresh</button>
+                            <span id="commission-summary-last-updated" class="faint" style="font-size:.8rem;">Not yet loaded</span>
+                            <button id="commission-summary-refresh-btn" class="action-button btn-sm">⟳ Refresh</button>
                         </div>
                     </div>
                     <div id="commission-summary-list">
-                        <p style="color:#6a5030; font-style:italic;">Click Refresh to load commission data...</p>
+                        <p class="loading-message">Loading commission data...</p>
                     </div>
-                    <p style="font-size:0.75rem; color:#4a3810; margin-top:12px; margin-bottom:0;">Only managers can mark commission as paid.</p>
                 </div>
+            </div>
 
-                <!-- COMPOST INVENTORY -->
-                <div class="content-block">
-                    <h2>🌱 Compost Inventory</h2>
-                    <p style="color:#8090a0; margin-bottom:16px; font-size:0.95rem;">
-                        Set how many Bags of Compost are currently in stock. Employees on the POS will see this count and cannot sell more than what's available.
-                    </p>
-                    <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-bottom:10px;">
+            <!-- SHIFT NOTE -->
+            <div class="tab-panel" data-panel="shiftnote">
+                <div class="content-block" id="shift-notes-section">
+                    <div class="panel-head">
                         <div>
-                            <p style="font-size:0.82rem; color:#8090a0; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.06em;">Current Stock</p>
-                            <p id="compost-stock-display" style="font-size:2.5rem; font-weight:900; color:#48bb78; line-height:1;">—</p>
+                            <h2>Shift Note</h2>
+                            <p>Shows as a banner at the top of the POS for every employee, live.</p>
                         </div>
-                        <div style="flex:1; min-width:200px;">
-                            <p style="font-size:0.82rem; color:#8090a0; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.06em;">Update Stock</p>
-                            <div style="display:flex; gap:10px; align-items:center;">
-                                <input type="number" id="compost-stock-input" min="0" placeholder="Enter quantity"
-                                    style="width:140px; padding:10px 14px; border-radius:8px; border:1px solid #3a4550; background:#0e1114; color:#e8eef4; font-size:1rem;">
-                                <button id="compost-stock-save-btn" class="action-button checkout-button" style="padding:10px 20px;">💾 Save</button>
+                    </div>
+
+                    <p class="field-label" style="margin-bottom:8px;">Currently Showing</p>
+                    <div id="current-shift-note-display" class="note-current empty">Loading current note...</div>
+
+                    <p class="field-label" style="margin-bottom:8px;">Post New Note</p>
+                    <div class="note-editor">
+                        <div class="note-toolbar">
+                            <button type="button" class="note-fmt-btn" data-tag="strong" title="Bold"><b>B</b></button>
+                            <button type="button" class="note-fmt-btn" data-tag="em" title="Italic"><i>I</i></button>
+                            <button type="button" class="note-fmt-btn" data-tag="u" title="Underline"><u>U</u></button>
+                            <div class="note-toolbar-divider"></div>
+                            <div class="note-toolbar-group" title="Font Size (12–36)">
+                                <span class="note-toolbar-label">Size</span>
+                                <input type="number" id="note-font-size" min="12" max="36" value="18" class="note-size-input">
+                                <button type="button" class="note-fmt-btn" id="note-apply-size">Apply</button>
+                            </div>
+                            <div class="note-toolbar-divider"></div>
+                            <div class="note-toolbar-group" title="Font Color">
+                                <span class="note-toolbar-label">Color</span>
+                                <input type="color" id="note-color-picker" value="#f1b44c" class="note-color-input">
+                                <button type="button" class="note-fmt-btn" id="note-apply-color">Apply</button>
                             </div>
                         </div>
+                        <textarea id="shift-note-input" rows="5" placeholder="Type a shift note for employees... (e.g. Compost restocked — 20 bags available)&#10;Highlight text, then click a format button."></textarea>
                     </div>
-                    <p id="compost-stock-status" style="font-size:0.9rem; font-weight:600; margin-top:4px;"></p>
-                </div>
 
-                <!-- TRANSACTION LOG -->
+                    <div id="shift-note-preview-wrap">
+                        <p class="field-label" style="margin-bottom:8px;">Preview</p>
+                        <div id="shift-note-live-preview" class="shift-note-render"></div>
+                    </div>
+
+                    <div class="form-actions" style="margin-top:16px; align-items:center;">
+                        <button id="post-shift-note-btn" class="action-button btn-primary">📌 Post Note</button>
+                        <button id="clear-shift-note-btn" class="action-button clear-cart-btn">Clear Note</button>
+                        <span id="shift-note-status" class="status-text"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- INVENTORY -->
+            <div class="tab-panel" data-panel="inventory">
                 <div class="content-block">
-                    <h2>📋 Transaction Records</h2>
-                    <button id="export-transactions-btn" class="checkout-button" style="margin-bottom:15px;">📥 Export to CSV</button>
-                    <div id="transactions-display" class="transactions-table-container" style="max-height:400px; overflow-y:auto;">
+                    <div class="panel-head">
+                        <div>
+                            <h2>Compost Inventory</h2>
+                            <p>Employees can't sell more bags than what's set here.</p>
+                        </div>
+                    </div>
+                    <div class="inventory-grid">
+                        <div class="inventory-figure">
+                            <img src="compost.png" alt="">
+                            <div>
+                                <p class="field-label">Current Stock</p>
+                                <p id="compost-stock-display">—</p>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="field-label" style="margin-bottom:8px;">Update Stock</p>
+                            <div class="inline-form">
+                                <input type="number" id="compost-stock-input" min="0" placeholder="Quantity">
+                                <button id="compost-stock-save-btn" class="action-button btn-primary">💾 Save</button>
+                            </div>
+                            <p id="compost-stock-status" class="status-text" style="margin-top:10px;"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TRANSACTIONS -->
+            <div class="tab-panel" data-panel="transactions">
+                <div class="content-block">
+                    <div class="panel-head">
+                        <div>
+                            <h2>Transaction Records</h2>
+                            <p>Every sale and trash purchase, newest first.</p>
+                        </div>
+                        <button id="export-transactions-btn" class="action-button btn-sm">📥 Export CSV</button>
+                    </div>
+                    <div id="transactions-display" class="transactions-table-container">
                         <p class="loading-message">Loading transactions...</p>
                     </div>
                 </div>
+            </div>
 
-                <!-- COMMISSION PAYMENT LOG -->
+            <!-- PAYMENT LOG -->
+            <div class="tab-panel" data-panel="paylog">
                 <div class="content-block">
-                    <h2>✅ Commission Payment Log</h2>
-                    <button id="export-commission-log-btn" class="checkout-button" style="margin-bottom:15px;">📥 Export Log</button>
-                    <div id="commission-payment-logs-display" class="transactions-table-container" style="max-height:400px; overflow-y:auto;">
+                    <div class="panel-head">
+                        <div>
+                            <h2>Commission Payment Log</h2>
+                            <p>Who was paid, how much, and by whom.</p>
+                        </div>
+                        <button id="export-commission-log-btn" class="action-button btn-sm">📥 Export CSV</button>
+                    </div>
+                    <div id="commission-payment-logs-display" class="transactions-table-container">
                         <p class="loading-message">Loading payment logs...</p>
                     </div>
                 </div>
-
             </div>
         </div>
-    </div>
+    </main>
 
     <!-- BACKDOOR MODAL -->
     <div id="backdoor-modal">
         <div id="backdoor-modal-content">
             <h3>🔐 Admin Backdoor</h3>
-            <p style="color:#8a7040; font-size:0.85rem; margin-bottom:16px;">First-time setup access</p>
+            <p class="sub">First-time setup access</p>
             <input type="password" id="backdoor-password-input" placeholder="Admin password">
             <div class="btn-group">
-                <button id="backdoor-cancel-btn" class="action-button clear-cart-btn" style="padding:10px 20px;">Cancel</button>
-                <button id="backdoor-login-btn" class="action-button checkout-button" style="padding:10px 20px;">Enter</button>
+                <button id="backdoor-cancel-btn" class="action-button">Cancel</button>
+                <button id="backdoor-login-btn" class="action-button btn-primary">Enter</button>
             </div>
-            <p id="backdoor-error" style="color:#fc8181; font-size:0.85rem; margin-top:10px;"></p>
+            <p id="backdoor-error"></p>
         </div>
     </div>
 
     <footer>
-        <small>Pump & Dump Staff Portal · Internal Use Only</small>
+        <small>Pump &amp; Dump Staff Portal · Internal Use Only</small>
     </footer>
 </body>
 </html>

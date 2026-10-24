@@ -12,27 +12,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // ===== PRODUCT DEFINITIONS =====
     // Price = total sale price | bizCut = business's share | empCut = employee's commission
     const PRODUCTS = [
-        { id: 'portalodo',       name: 'Portaloo',      img: 'portaloo.png',      price: 10000, bizCut: 1000,  empCut: 9000, desc: '$10,000 | Your cut: $9,000' },
-        { id: 'zero_ply',        name: '0 PLY',          img: '0ply.png',          price: 100,   bizCut: 10,    empCut: 90,   desc: '$100 | Your cut: $90' },
-        { id: 'twelve_ply',      name: '12 PLY',         img: '0ply.png',         price: 100,   bizCut: 10,    empCut: 90,   desc: '$100 | Your cut: $90' },
-        { id: 'toilet_seal',     name: 'Toilet Seal',    img: 'toiletsealpng.png', price: 1000,  bizCut: 100,   empCut: 900,  desc: '$1,000 | Your cut: $900' },
-        { id: 'lighter',         name: 'D&P Lighter',    img: 'lighter.png',       price: 500,   bizCut: 100,   empCut: 400,  desc: '$500 | Your cut: $400' },
-        { id: 'keychain',        name: 'D&P Keychain',   img: 'keychain.png',      price: 500,   bizCut: 100,   empCut: 400,  desc: '$500 | Your cut: $400' },
-        { id: 'bag_of_compost',  name: 'Bag of Compost', img: 'compost.png',       price: 4000,  bizCut: 3000,  empCut: 1000, desc: '$4,000 | Your cut: $1,000' },
+        { id: 'portalodo',       name: 'Portaloo',      img: 'portaloo.png',      price: 10000, bizCut: 1000,  empCut: 9000 },
+        { id: 'zero_ply',        name: '0 PLY',          img: '0ply.png',          price: 100,   bizCut: 10,    empCut: 90 },
+        { id: 'twelve_ply',      name: '12 PLY',         img: '0ply.png',          price: 100,   bizCut: 10,    empCut: 90 },
+        { id: 'toilet_seal',     name: 'Toilet Seal',    img: 'toiletsealpng.png', price: 1000,  bizCut: 100,   empCut: 900 },
+        { id: 'lighter',         name: 'D&P Lighter',    img: 'lighter.png',       price: 500,   bizCut: 100,   empCut: 400 },
+        { id: 'keychain',        name: 'D&P Keychain',   img: 'keychain.png',      price: 500,   bizCut: 100,   empCut: 400 },
+        { id: 'bag_of_compost',  name: 'Bag of Compost', img: 'compost.png',       price: 4000,  bizCut: 3000,  empCut: 1000 },
     ];
 
     // Buy items (business buys from customers)
     const BUY_ITEMS = [
-    { id: 'bag_of_trash', name: 'Bag of Trash', img: 'trash.png', price: 150, empCut: 160 }
+        { id: 'bag_of_trash', name: 'Bag of Trash', img: 'trash.png', price: 150, empCut: 160 }
     ];
-
 
     // ===== FIREBASE BYPASS MODE =====
     // Set to true to skip Firebase and use the app without a database.
-    // Flip back to false once Firebase credentials are added.
     const FIREBASE_BYPASS = false;
 
-    // Minimal stub so the rest of the code runs without real Firebase
     function buildBypassFirebase() {
         const noopPromise = () => Promise.resolve({ docs: [], empty: true, forEach: () => {} });
         return {
@@ -77,35 +74,48 @@ document.addEventListener('DOMContentLoaded', () => {
         const loginSubmitBtn = document.getElementById('login-submit-btn');
         const mainLoginError = document.getElementById('main-login-error');
         const appContent = document.getElementById('application-main-content');
-        const processingEmployeeSelect = document.getElementById('processing-employee-select');
         const activeEmployeeDisplay = document.getElementById('active-employee-display');
         const activeEmployeeName = document.getElementById('active-employee-name');
+        const activeEmployeeInitials = document.getElementById('active-employee-initials');
+        const activeEmployeeRank = document.getElementById('active-employee-rank');
         const showPosBtn = document.getElementById('show-pos-view-btn');
         const showBuySellBtn = document.getElementById('show-buysell-view-btn');
         const posView = document.getElementById('pos-view-container');
         const buySellView = document.getElementById('buysell-view-container');
         const posItemsContainer = document.getElementById('pos-items-container');
-        const posSearchInput = document.getElementById('pos-item-search-input');
-        const posSearchClearBtn = document.getElementById('pos-item-search-clear-btn');
         const posCartList = document.getElementById('pos-cart-list');
+        const posCartEmpty = document.getElementById('pos-cart-empty');
         const currentCartSection = document.getElementById('current-cart-section');
         const posTotalDisplay = document.getElementById('total');
+        const posItemCount = document.getElementById('pos-item-count');
+        const posCommissionPreview = document.getElementById('pos-commission-preview');
         const posCheckoutBtn = document.getElementById('checkout-button-pos');
         const posClearBtn = document.getElementById('clear-cart-button-pos');
         const posStatusMsg = document.getElementById('pos-status-message');
         const buysItemsContainer = document.getElementById('mikes-buys-items-container');
         const totalOwedCustomer = document.getElementById('total-owed-to-customer');
         const summaryOwedCustomer = document.getElementById('summary-owed-customer');
+        const buySellItemCount = document.getElementById('buysell-item-count');
+        const buySellCommissionPreview = document.getElementById('buysell-commission-preview');
         const buySellClearBtn = document.getElementById('buysell-clear-button');
         const buySellCheckoutBtn = document.getElementById('buysell-checkout-button');
         const buySellStatus = document.getElementById('buysell-status-message');
 
         let loginEmployeeList = [];
-        let posCart = {}; // { productId: quantity }
-        let buySellCart = {}; // { itemId: quantity }
-        let currentEmployee = null; // { id, fullName, isManager }
+        let posCart = {};      // { productId: quantity }
+        let buySellCart = {};  // { itemId: quantity }
+        let currentEmployee = null; // { id, fullName, isManager, rank }
 
-        // Backdoor
+        const isOwner = () => (currentEmployee?.rank || '') === 'Owner';
+
+        function setStatus(el, text, kind) {
+            if (!el) return;
+            el.textContent = text;
+            el.classList.remove('ok', 'err');
+            if (kind) el.classList.add(kind);
+        }
+
+        // ===== BACKDOOR =====
         const backdoorTrigger = document.getElementById('backdoor-trigger');
         const backdoorModal = document.getElementById('backdoor-modal');
         const backdoorPasswordInput = document.getElementById('backdoor-password-input');
@@ -162,8 +172,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         loginEmployeeSelect?.addEventListener('change', () => {
             if (loginEmployeeSelect.value) {
-                loginPasswordGroup.style.display = 'block';
-                loginSubmitBtn.style.display = 'block';
+                loginPasswordGroup.style.display = 'flex';
+                loginSubmitBtn.style.display = 'flex';
                 loginPasswordInput.value = '';
                 loginPasswordInput.focus();
                 mainLoginError.style.display = 'none';
@@ -196,12 +206,86 @@ document.addEventListener('DOMContentLoaded', () => {
         function showAppContent() {
             if (loginContainer) loginContainer.style.display = 'none';
             if (appContent) appContent.style.display = 'block';
-            if (activeEmployeeDisplay) activeEmployeeDisplay.style.display = 'block';
-            if (activeEmployeeName) activeEmployeeName.textContent = currentEmployee?.fullName || localStorage.getItem('loggedInEmployeeName') || '';
+            const name = currentEmployee?.fullName || localStorage.getItem('loggedInEmployeeName') || '';
+            if (activeEmployeeDisplay) activeEmployeeDisplay.style.display = 'flex';
+            if (activeEmployeeName) activeEmployeeName.textContent = name;
+            if (activeEmployeeInitials) activeEmployeeInitials.textContent = initials(name);
+            if (activeEmployeeRank) {
+                const rank = currentEmployee?.rank || '';
+                activeEmployeeRank.textContent = rank;
+                activeEmployeeRank.style.display = rank ? 'inline-block' : 'none';
+            }
             if (typeof addLogoutButton === 'function') addLogoutButton();
             renderPosItems();
             renderBuySellItems();
+            updatePosTotal();
+            updateBuySellTotal();
+            startShiftNoteListener();
+            checkScrollVisibility();
         }
+
+        // ===== SHIFT NOTE =====
+        const noteBanner = document.getElementById('shift-note-banner');
+        const noteText = document.getElementById('shift-note-text');
+        const noteMeta = document.getElementById('shift-note-meta');
+        const noteDismiss = document.getElementById('shift-note-dismiss');
+        const noteReopen = document.getElementById('shift-note-reopen');
+        const NOTE_DISMISS_KEY = 'pd_dismissedShiftNote';
+        let currentNoteKey = '';
+        let noteListenerStarted = false;
+
+        function getDismissedKey() {
+            try { return localStorage.getItem(NOTE_DISMISS_KEY) || ''; } catch (e) { return ''; }
+        }
+        function setDismissedKey(key) {
+            try { localStorage.setItem(NOTE_DISMISS_KEY, key); } catch (e) { /* ignore */ }
+        }
+
+        function renderShiftNote(data) {
+            const text = (data?.text || '').trim();
+            if (!text) {
+                currentNoteKey = '';
+                noteBanner.style.display = 'none';
+                noteReopen.style.display = 'none';
+                return;
+            }
+            currentNoteKey = timestampKey(data.postedAt) || text.slice(0, 40);
+            noteText.innerHTML = sanitizeNoteHtml(text);
+            const when = formatTimestamp(data.postedAt);
+            noteMeta.textContent = `Posted by ${data.postedBy || 'Manager'}${when ? ' · ' + when : ''}`;
+
+            // A dismissed note stays hidden until a manager posts a new one.
+            const dismissed = getDismissedKey() === currentNoteKey;
+            noteBanner.style.display = dismissed ? 'none' : 'flex';
+            noteReopen.style.display = dismissed ? 'inline-flex' : 'none';
+        }
+
+        function startShiftNoteListener() {
+            if (noteListenerStarted || !noteBanner) return;
+            noteListenerStarted = true;
+            const ref = firestore.doc(db, SHIFT_NOTE_COLLECTION, SHIFT_NOTE_DOC);
+            if (typeof firestore.onSnapshot === 'function') {
+                // Live: a note posted mid-shift pops up without a refresh
+                firestore.onSnapshot(ref,
+                    snap => renderShiftNote(snap.exists() ? snap.data() : null),
+                    err => console.warn("Shift note listener error:", err));
+            } else {
+                firestore.getDoc(ref)
+                    .then(snap => renderShiftNote(snap.exists() ? snap.data() : null))
+                    .catch(err => console.warn("Could not load shift note:", err));
+            }
+        }
+
+        noteDismiss?.addEventListener('click', () => {
+            setDismissedKey(currentNoteKey);
+            noteBanner.style.display = 'none';
+            noteReopen.style.display = 'inline-flex';
+        });
+        noteReopen?.addEventListener('click', () => {
+            setDismissedKey('');
+            noteBanner.style.display = 'flex';
+            noteReopen.style.display = 'none';
+        });
 
         // ===== COMPOST STOCK =====
         let compostStock = null; // null = not loaded yet
@@ -230,67 +314,103 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        // ===== PRODUCT CARDS (shared by POS + Buy Trash) =====
+        // opts: { item, cart, maxQty(), onChange(), subtitleHtml, idPrefix }
+        function buildItemCard(opts) {
+            const { item, cart, idPrefix } = opts;
+            const div = document.createElement('div');
+            div.className = 'item';
+            div.dataset.id = item.id;
+            div.innerHTML = `
+                <span class="qty-badge"></span>
+                <div class="item-media"><img src="${esc(item.img)}" alt="${esc(item.name)}" class="item-img"></div>
+                <p class="item-name">${esc(item.name)}</p>
+                <p class="item-price">${money(item.price)}${opts.priceSuffix || ''}</p>
+                ${opts.subtitleHtml || ''}
+                <div class="stepper">
+                    <button type="button" class="step-down" aria-label="Remove one">−</button>
+                    <input type="number" class="quantity" id="${idPrefix}${item.id}" value="0" min="0" inputmode="numeric" aria-label="${esc(item.name)} quantity">
+                    <button type="button" class="step-up" aria-label="Add one">+</button>
+                </div>
+            `;
+            const input = div.querySelector('.quantity');
+            const badge = div.querySelector('.qty-badge');
+            const max = () => (typeof opts.maxQty === 'function' ? opts.maxQty() : Infinity);
+
+            function setQty(q) {
+                q = Math.max(0, Math.min(parseInt(q) || 0, max()));
+                input.value = q;
+                if (q > 0) cart[item.id] = q; else delete cart[item.id];
+                badge.textContent = q;
+                div.classList.toggle('in-cart', q > 0);
+                opts.onChange();
+            }
+
+            const blocked = max() === 0;
+            if (blocked) {
+                div.classList.add('sold-out');
+                input.disabled = true;
+                div.querySelectorAll('.stepper button').forEach(b => b.disabled = true);
+            }
+
+            input.addEventListener('input', () => setQty(input.value));
+            div.querySelector('.step-up').addEventListener('click', (e) => { e.stopPropagation(); setQty((parseInt(input.value) || 0) + 1); });
+            div.querySelector('.step-down').addEventListener('click', (e) => { e.stopPropagation(); setQty((parseInt(input.value) || 0) - 1); });
+            div.addEventListener('click', (e) => {
+                if (e.target.closest('.stepper')) return;
+                if (blocked) return;
+                setQty((parseInt(input.value) || 0) + 1);
+            });
+
+            if (cart[item.id]) setQty(cart[item.id]);
+            return div;
+        }
+
         // ===== POS ITEMS =====
         function renderPosItems() {
             if (!posItemsContainer) return;
             posItemsContainer.innerHTML = '';
             PRODUCTS.forEach(product => {
                 const isCompost = product.id === 'bag_of_compost';
-                const stockLabel = isCompost && compostStock !== null
-                    ? `<p class="item-cut" id="compost-stock-display" style="color:${compostStock > 0 ? '#48bb78' : '#fc8181'};">In Stock: ${compostStock}</p>`
-                    : (isCompost ? `<p class="item-cut" style="color:#8a7040;">Stock: —</p>` : '');
-
-                const div = document.createElement('div');
-                div.className = 'item';
-                div.dataset.id = product.id;
-                div.innerHTML = `
-                    <img src="${product.img}" alt="${product.name}" class="item-img">
-                    <p>${product.name}</p>
-                    <p class="item-price">$${product.price.toLocaleString()}</p>
-                    <p class="item-cut">Your cut: $${product.empCut.toLocaleString()}</p>
-                    ${stockLabel}
-                    <label>Qty:</label>
-                    <input type="number" class="quantity" id="qty_${product.id}" value="0" min="0" ${isCompost && compostStock === 0 ? 'disabled' : ''}>
-                `;
-                div.querySelector('.quantity').addEventListener('input', () => {
-                    const input = div.querySelector('.quantity');
-                    let qty = parseInt(input.value) || 0;
-                    // Cap at stock for compost
-                    if (isCompost && compostStock !== null && qty > compostStock) {
-                        qty = compostStock;
-                        input.value = qty;
-                    }
-                    if (qty > 0) posCart[product.id] = qty;
-                    else delete posCart[product.id];
-                    updatePosTotal();
-                });
-                div.addEventListener('click', (e) => {
-                    if (e.target.tagName === 'INPUT') return;
-                    if (isCompost && compostStock === 0) return; // blocked
-                    const input = div.querySelector('.quantity');
-                    const current = parseInt(input.value) || 0;
-                    const next = current + 1;
-                    if (isCompost && compostStock !== null && next > compostStock) return;
-                    input.value = next;
-                    input.dispatchEvent(new Event('input'));
-                });
-                posItemsContainer.appendChild(div);
+                let subtitle = isOwner()
+                    ? `<p class="item-cut faint">Owner · no commission</p>`
+                    : `<p class="item-cut">Your cut: ${money(product.empCut)}</p>`;
+                if (isCompost) {
+                    subtitle += compostStock !== null
+                        ? `<p class="item-stock ${compostStock > 0 ? 'text-ok' : 'text-err'}">${compostStock > 0 ? `${compostStock} in stock` : 'Sold out'}</p>`
+                        : `<p class="item-stock faint">Stock: —</p>`;
+                }
+                posItemsContainer.appendChild(buildItemCard({
+                    item: product,
+                    cart: posCart,
+                    idPrefix: 'qty_',
+                    subtitleHtml: subtitle,
+                    maxQty: () => (isCompost && compostStock !== null) ? compostStock : Infinity,
+                    onChange: updatePosTotal,
+                }));
             });
         }
 
         function updatePosTotal() {
-            let total = 0;
+            let total = 0, commission = 0, count = 0;
             for (const [id, qty] of Object.entries(posCart)) {
                 const prod = PRODUCTS.find(p => p.id === id);
-                if (prod) total += prod.price * qty;
+                if (!prod) continue;
+                total += prod.price * qty;
+                commission += (isOwner() ? 0 : prod.empCut) * qty;
+                count += qty;
             }
             if (posTotalDisplay) posTotalDisplay.textContent = total.toLocaleString();
+            if (posItemCount) posItemCount.textContent = count;
+            if (posCommissionPreview) posCommissionPreview.textContent = money(commission);
             renderCartList();
+            checkScrollVisibility();
         }
 
         function renderCartList() {
             const hasItems = Object.keys(posCart).length > 0;
             if (currentCartSection) currentCartSection.style.display = hasItems ? 'block' : 'none';
+            if (posCartEmpty) posCartEmpty.style.display = hasItems ? 'none' : 'block';
             if (!posCartList) return;
             posCartList.innerHTML = '';
             for (const [id, qty] of Object.entries(posCart)) {
@@ -299,47 +419,39 @@ document.addEventListener('DOMContentLoaded', () => {
                 const row = document.createElement('div');
                 row.className = 'cart-item-row';
                 row.innerHTML = `
-                    <span class="cart-item-name">${prod.name}</span>
-                    <span class="cart-item-qty">x${qty}</span>
-                    <span class="cart-item-total">$${(prod.price * qty).toLocaleString()}</span>
+                    <span class="cart-item-name">${esc(prod.name)}</span>
+                    <span class="cart-item-qty">${qty} × ${money(prod.price)}</span>
+                    <span class="cart-item-total">${money(prod.price * qty)}</span>
                 `;
                 posCartList.appendChild(row);
             }
         }
 
-        posSearchInput?.addEventListener('input', () => {
-            const term = posSearchInput.value.toLowerCase();
-            document.querySelectorAll('#pos-items-container .item').forEach(el => {
-                const name = el.querySelector('p')?.textContent.toLowerCase() || '';
-                el.style.display = (!term || name.includes(term)) ? 'flex' : 'none';
-            });
-        });
-        posSearchClearBtn?.addEventListener('click', () => {
-            posSearchInput.value = '';
-            posSearchInput.dispatchEvent(new Event('input'));
-        });
+        function resetPosCart() {
+            posCart = {};
+            renderPosItems();
+            updatePosTotal();
+        }
 
         posClearBtn?.addEventListener('click', () => {
-            posCart = {};
-            document.querySelectorAll('#pos-items-container .quantity').forEach(el => el.value = 0);
-            updatePosTotal();
-            if (posStatusMsg) posStatusMsg.textContent = '';
+            resetPosCart();
+            setStatus(posStatusMsg, '');
         });
 
         posCheckoutBtn?.addEventListener('click', async () => {
-            if (Object.keys(posCart).length === 0) { alert("Cart is empty."); return; }
+            if (Object.keys(posCart).length === 0) { setStatus(posStatusMsg, 'Cart is empty.', 'err'); return; }
             const empName = currentEmployee?.fullName || localStorage.getItem('loggedInEmployeeName') || 'Unknown';
             const empId = currentEmployee?.id || localStorage.getItem('loggedInEmployeeId') || '';
-            const isOwner = (currentEmployee?.rank || '') === 'Owner';
+            const owner = isOwner();
 
             let totalRevenue = 0, totalEmpCommission = 0, totalBizCut = 0;
             const items = [];
             for (const [id, qty] of Object.entries(posCart)) {
                 const prod = PRODUCTS.find(p => p.id === id);
                 if (!prod || qty <= 0) continue;
-                const empCut = isOwner ? 0 : prod.empCut;
+                const empCut = owner ? 0 : prod.empCut;
                 // Owners take no commission — their cut rolls into the business cut instead
-                const bizCut = isOwner ? (prod.bizCut + prod.empCut) : prod.bizCut;
+                const bizCut = owner ? (prod.bizCut + prod.empCut) : prod.bizCut;
                 totalRevenue += prod.price * qty;
                 totalEmpCommission += empCut * qty;
                 totalBizCut += bizCut * qty;
@@ -347,7 +459,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             posCheckoutBtn.disabled = true;
-            if (posStatusMsg) posStatusMsg.textContent = 'Processing...';
+            setStatus(posStatusMsg, 'Processing...');
 
             try {
                 await firestore.addDoc(firestore.collection(db, "pd_transactions"), {
@@ -362,22 +474,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     createdAt: firestore.serverTimestamp()
                 });
 
-                // Decrement compost stock if any were sold
                 const compostQtySold = posCart['bag_of_compost'] || 0;
-                if (compostQtySold > 0) {
-                    await decrementCompostStock(compostQtySold);
-                }
+                if (compostQtySold > 0) await decrementCompostStock(compostQtySold);
 
-                if (posStatusMsg) { posStatusMsg.textContent = `✅ Checkout complete! Your commission: $${totalEmpCommission.toLocaleString()}`; posStatusMsg.style.color = '#48bb78'; }
-                posCart = {};
-                document.querySelectorAll('#pos-items-container .quantity').forEach(el => el.value = 0);
-                // Re-render items to show updated stock count
+                setStatus(posStatusMsg, `✅ Sale complete — ${money(totalRevenue)}. Your commission: ${money(totalEmpCommission)}`, 'ok');
                 await loadCompostStock();
-                renderPosItems();
-                updatePosTotal();
+                resetPosCart();
             } catch (err) {
                 console.error("Checkout error:", err);
-                if (posStatusMsg) { posStatusMsg.textContent = 'Error processing checkout.'; posStatusMsg.style.color = '#fc8181'; }
+                setStatus(posStatusMsg, 'Error processing checkout. Try again.', 'err');
             } finally {
                 posCheckoutBtn.disabled = false;
             }
@@ -388,55 +493,52 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!buysItemsContainer) return;
             buysItemsContainer.innerHTML = '';
             BUY_ITEMS.forEach(item => {
-                const div = document.createElement('div');
-                div.className = 'item';
-                div.dataset.id = item.id;
-                div.innerHTML = `
-                    <img src="${item.img}" alt="${item.name}" class="item-img">
-                    <p>${item.name}</p>
-                    <p class="item-price">$${item.price.toLocaleString()} each</p>
-                    <label>Qty:</label>
-                    <input type="number" class="quantity" id="bqty_${item.id}" value="0" min="0">
-                `;
-                div.querySelector('.quantity').addEventListener('input', () => {
-                    const qty = parseInt(div.querySelector('.quantity').value) || 0;
-                    if (qty > 0) buySellCart[item.id] = qty;
-                    else delete buySellCart[item.id];
-                    updateBuySellTotal();
-                });
-                div.addEventListener('click', (e) => {
-                    if (e.target.tagName === 'INPUT') return;
-                    const input = div.querySelector('.quantity');
-                    const current = parseInt(input.value) || 0;
-                    input.value = current + 1;
-                    input.dispatchEvent(new Event('input'));
-                });
-                buysItemsContainer.appendChild(div);
+                const cut = isOwner() ? 0 : (item.empCut ?? item.price);
+                buysItemsContainer.appendChild(buildItemCard({
+                    item,
+                    cart: buySellCart,
+                    idPrefix: 'bqty_',
+                    priceSuffix: ' <span class="faint" style="font-size:.8rem;font-family:var(--font);font-weight:600;">each</span>',
+                    subtitleHtml: isOwner()
+                        ? `<p class="item-cut faint">Owner · no commission</p>`
+                        : `<p class="item-cut">Your cut: ${money(cut)}</p>`,
+                    onChange: updateBuySellTotal,
+                }));
             });
         }
 
         function updateBuySellTotal() {
-            let total = 0;
+            let total = 0, commission = 0, count = 0;
             for (const [id, qty] of Object.entries(buySellCart)) {
                 const item = BUY_ITEMS.find(i => i.id === id);
-                if (item) total += item.price * qty;
+                if (!item) continue;
+                total += item.price * qty;
+                commission += (isOwner() ? 0 : (item.empCut ?? item.price)) * qty;
+                count += qty;
             }
-            if (totalOwedCustomer) totalOwedCustomer.textContent = `$${total.toLocaleString()}`;
-            if (summaryOwedCustomer) summaryOwedCustomer.textContent = `$${total.toLocaleString()}`;
+            if (totalOwedCustomer) totalOwedCustomer.textContent = money(total);
+            if (summaryOwedCustomer) summaryOwedCustomer.textContent = money(total);
+            if (buySellItemCount) buySellItemCount.textContent = count;
+            if (buySellCommissionPreview) buySellCommissionPreview.textContent = money(commission);
+            checkScrollVisibility();
+        }
+
+        function resetBuySellCart() {
+            buySellCart = {};
+            renderBuySellItems();
+            updateBuySellTotal();
         }
 
         buySellClearBtn?.addEventListener('click', () => {
-            buySellCart = {};
-            document.querySelectorAll('#mikes-buys-items-container .quantity').forEach(el => el.value = 0);
-            updateBuySellTotal();
-            if (buySellStatus) buySellStatus.textContent = '';
+            resetBuySellCart();
+            setStatus(buySellStatus, '');
         });
 
         buySellCheckoutBtn?.addEventListener('click', async () => {
-            if (Object.keys(buySellCart).length === 0) { alert("Nothing in cart."); return; }
+            if (Object.keys(buySellCart).length === 0) { setStatus(buySellStatus, 'Nothing to log yet.', 'err'); return; }
             const empName = currentEmployee?.fullName || localStorage.getItem('loggedInEmployeeName') || 'Unknown';
             const empId = currentEmployee?.id || localStorage.getItem('loggedInEmployeeId') || '';
-            const isOwner = (currentEmployee?.rank || '') === 'Owner';
+            const owner = isOwner();
 
             let totalPayout = 0;
             let totalEmpCommission = 0;
@@ -444,14 +546,14 @@ document.addEventListener('DOMContentLoaded', () => {
             for (const [id, qty] of Object.entries(buySellCart)) {
                 const item = BUY_ITEMS.find(i => i.id === id);
                 if (!item || qty <= 0) continue;
-                const empCut = isOwner ? 0 : (item.empCut ?? item.price);
+                const empCut = owner ? 0 : (item.empCut ?? item.price);
                 totalPayout += item.price * qty;
                 totalEmpCommission += empCut * qty;
                 items.push({ itemId: item.id, itemName: item.name, qty, unitPrice: item.price, unitEmpCut: empCut, lineTotal: item.price * qty, lineEmpCommission: empCut * qty });
             }
 
             buySellCheckoutBtn.disabled = true;
-            if (buySellStatus) buySellStatus.textContent = 'Processing...';
+            setStatus(buySellStatus, 'Processing...');
 
             try {
                 await firestore.addDoc(firestore.collection(db, "pd_transactions"), {
@@ -466,13 +568,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     commissionCleared: false,
                     createdAt: firestore.serverTimestamp()
                 });
-                if (buySellStatus) { buySellStatus.textContent = `✅ Purchase logged! Paid customer: $${totalPayout.toLocaleString()}`; buySellStatus.style.color = '#48bb78'; }
-                buySellCart = {};
-                document.querySelectorAll('#mikes-buys-items-container .quantity').forEach(el => el.value = 0);
-                updateBuySellTotal();
+                setStatus(buySellStatus, `✅ Purchase logged! Pay the customer ${money(totalPayout)}.`, 'ok');
+                resetBuySellCart();
             } catch (err) {
                 console.error("Purchase error:", err);
-                if (buySellStatus) { buySellStatus.textContent = 'Error logging purchase.'; buySellStatus.style.color = '#fc8181'; }
+                setStatus(buySellStatus, 'Error logging purchase. Try again.', 'err');
             } finally {
                 buySellCheckoutBtn.disabled = false;
             }
@@ -480,31 +580,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // ===== VIEW SWITCHING =====
         showPosBtn?.addEventListener('click', () => {
-            posView.style.display = 'block';
+            posView.style.display = '';
             buySellView.style.display = 'none';
             showPosBtn.classList.add('active');
             showBuySellBtn.classList.remove('active');
+            checkScrollVisibility();
         });
         showBuySellBtn?.addEventListener('click', () => {
             posView.style.display = 'none';
-            buySellView.style.display = 'block';
+            buySellView.style.display = '';
             showBuySellBtn.classList.add('active');
             showPosBtn.classList.remove('active');
+            checkScrollVisibility();
         });
 
-        // ===== SCROLL BUTTON =====
+        // ===== "VIEW CART" BUTTON (phones / narrow screens, where the cart sits below products) =====
         const scrollBtn = document.getElementById('scroll-to-bottom-btn');
+        function activeCartPanel() {
+            return buySellView && buySellView.style.display !== 'none'
+                ? document.getElementById('buysell-cart-panel')
+                : document.getElementById('pos-cart-panel');
+        }
+        function checkScrollVisibility() {
+            if (!scrollBtn) return;
+            const panel = activeCartPanel();
+            if (!panel || !appContent || appContent.style.display === 'none') { scrollBtn.style.display = 'none'; return; }
+            const rect = panel.getBoundingClientRect();
+            const cartOffscreen = rect.top > window.innerHeight - 80;
+            const hasItems = Object.keys(posCart).length > 0 || Object.keys(buySellCart).length > 0;
+            scrollBtn.style.display = (cartOffscreen && hasItems) ? 'inline-flex' : 'none';
+        }
         if (scrollBtn) {
-            function checkScrollVisibility() {
-                const scrollTop = window.scrollY;
-                const viewportH = window.innerHeight;
-                const fullH = document.documentElement.scrollHeight;
-                scrollBtn.style.display = (fullH > viewportH + 20 && scrollTop + viewportH < fullH - 100) ? 'block' : 'none';
-            }
-            checkScrollVisibility();
-            window.addEventListener('scroll', checkScrollVisibility);
+            window.addEventListener('scroll', checkScrollVisibility, { passive: true });
             window.addEventListener('resize', checkScrollVisibility);
-            scrollBtn.addEventListener('click', () => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' }));
+            scrollBtn.addEventListener('click', () => activeCartPanel()?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
         }
 
         // ===== INIT =====
@@ -526,9 +635,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let firebaseReadyProcessed = false;
 
-    // If bypass is on, skip waiting for Firebase entirely
     if (FIREBASE_BYPASS) {
         executeMainAppLogic(buildBypassFirebase());
+    } else if (window.isFirebaseReady && window.db && window.firestoreFunctions) {
+        // Firebase usually finishes before this script runs — start right away instead of waiting on the timeout
+        firebaseReadyProcessed = true;
+        executeMainAppLogic({ db: window.db, functions: window.firestoreFunctions });
     } else {
         document.addEventListener('firebaseReady', (e) => {
             if (!appLogicHasRun && !firebaseReadyProcessed) { firebaseReadyProcessed = true; executeMainAppLogic(e.detail); }

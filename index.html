@@ -4,11 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pump & Dump - Staff Portal</title>
+    <link rel="icon" type="image/png" href="Logo.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="pump.css">
 
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-      import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, orderBy, serverTimestamp, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+      import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, orderBy, serverTimestamp, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
       const firebaseConfig = {
         apiKey: "AIzaSyCvJiyuMPPm3at_7QxLA-FRacqyC9SeVuA",
@@ -23,7 +27,7 @@
       try {
         const app = initializeApp(firebaseConfig);
         window.db = getFirestore(app);
-        window.firestoreFunctions = { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, orderBy, serverTimestamp, getDoc, setDoc };
+        window.firestoreFunctions = { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, orderBy, serverTimestamp, getDoc, setDoc, onSnapshot };
         window.isFirebaseReady = true;
         document.dispatchEvent(new CustomEvent('firebaseReady', { detail: { db: window.db, functions: window.firestoreFunctions } }));
       } catch (error) {
@@ -41,38 +45,34 @@
     <!-- LOADING SCREEN -->
     <div id="loading-overlay">
         <div class="loading-content">
+            <img src="Logo.png" alt="" class="loading-logo">
             <div class="spinner"></div>
-            <p>Loading Portal...</p>
+            <p>Loading Portal</p>
         </div>
     </div>
 
     <!-- NAVBAR -->
-    <div class="navbar">
-        <div class="dropdown">
-            <button class="logo-container">
-                <img src="Logo.png" alt="">
-            </button>
-            <div class="dropdown-content">
-                <a href="index.html">Home / POS</a>
-                <a href="commission.html">My Commission</a>
-                <a href="manager.html">Manager Portal</a>
-            </div>
+    <nav class="navbar">
+        <a href="index.html" class="nav-brand">
+            <img src="Logo.png" alt="Pump & Dump logo">
+            <span class="nav-brand-text"><strong>Pump &amp; Dump</strong><small>Staff Portal</small></span>
+        </a>
+        <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+        <div class="nav-links">
+            <a href="index.html">POS</a>
+            <a href="commission.html">My Commission</a>
+            <a href="manager.html">Manager Portal</a>
         </div>
-    </div>
+    </nav>
 
-    <div class="page-content-wrapper">
-        <header>
-            <div class="brand-header">
-                <h1>PUMP & DUMP</h1>
-                <p class="brand-tagline">Employee Staff Portal</p>
-            </div>
-        </header>
+    <main class="page-content-wrapper">
 
         <!-- LOGIN CARD -->
         <div id="employee-login-container" class="login-card">
+            <img src="Logo.png" alt="" class="login-logo">
             <div class="login-card-header">
-                <h2 class="login-card-title">Staff Login</h2>
-                <p class="login-card-subtitle">Select your name to continue</p>
+                <h1 class="login-card-title">Staff Login</h1>
+                <p class="login-card-subtitle">Select your name to clock in to the POS</p>
             </div>
             <form id="main-employee-login-form" class="login-form">
                 <div class="login-field">
@@ -85,91 +85,124 @@
                     <label for="main-employee-password">Password</label>
                     <input type="password" id="main-employee-password" autocomplete="current-password" placeholder="Enter your password">
                 </div>
-                <button type="submit" id="login-submit-btn" class="login-btn" style="display:none;">Login</button>
+                <button type="submit" id="login-submit-btn" class="login-btn" style="display:none;">Sign In</button>
             </form>
             <p id="main-login-error" class="login-error" style="display:none;">Incorrect password. Please try again.</p>
-            <!-- Backdoor trigger (hidden) -->
             <p class="backdoor-link" id="backdoor-trigger" title="">· · ·</p>
         </div>
 
         <!-- MAIN APP CONTENT (shown after login) -->
-        <div id="application-main-content" style="display:none; width:100%;">
-            <select id="processing-employee-select" style="display:none;"></select>
+        <div id="application-main-content" style="display:none;">
 
-            <div id="active-employee-display" style="display:none;">
-                <p>Logged in as:</p>
-                <p id="active-employee-name"></p>
+            <div class="app-topbar">
+                <div id="active-employee-display" style="display:none;">
+                    <span class="avatar" id="active-employee-initials">?</span>
+                    <div>
+                        <p class="who-label">Logged in as</p>
+                        <p><span id="active-employee-name"></span><span class="rank-pill" id="active-employee-rank" style="display:none;"></span></p>
+                    </div>
+                </div>
+                <div id="view-switcher">
+                    <button id="show-pos-view-btn" class="action-button active">🛒 Sell Products</button>
+                    <button id="show-buysell-view-btn" class="action-button">🗑️ Buy Trash</button>
+                </div>
             </div>
 
-            <div id="view-switcher">
-                <button id="show-pos-view-btn" class="action-button active">🛒 Sell Products</button>
-                <button id="show-buysell-view-btn" class="action-button">🔄 Buy Trash</button>
+            <!-- SHIFT NOTE (posted by managers) -->
+            <div id="shift-note-banner" style="display:none;" role="status">
+                <span class="shift-note-icon">📋</span>
+                <div class="shift-note-body">
+                    <span class="shift-note-label">Shift Note</span>
+                    <div id="shift-note-text"></div>
+                    <span id="shift-note-meta"></span>
+                </div>
+                <button id="shift-note-dismiss" title="Hide this note">&times;</button>
             </div>
+            <button id="shift-note-reopen" class="btn-sm">📋 Show shift note</button>
 
             <!-- POS VIEW -->
-            <div id="pos-view-container" class="calculator-container content-block">
+            <div id="pos-view-container" class="pos-layout">
+                <section class="content-block">
+                    <div class="panel-head">
+                        <div>
+                            <h2><span class="icon-chip">🧻</span>Products</h2>
+                            <p>Tap a product to add it, or use the − / + buttons.</p>
+                        </div>
+                    </div>
+                    <div class="items-container" id="pos-items-container">
+                        <p class="loading-message">Loading products...</p>
+                    </div>
+                </section>
 
-                <!-- Items Grid (populated by JS) -->
-                <div class="items-container" id="pos-items-container">
-                    <p class="loading-message">Loading products...</p>
-                </div>
+                <aside class="content-block cart-panel" id="pos-cart-panel">
+                    <h2>Current Sale</h2>
+                    <div id="current-cart-section" style="display:none;">
+                        <div class="cart-list" id="pos-cart-list"></div>
+                    </div>
+                    <div class="cart-empty" id="pos-cart-empty">Cart is empty</div>
 
-                <div id="current-cart-section" class="content-block" style="display:none;">
-                    <h2>Current Cart</h2>
-                    <div class="cart-list" id="pos-cart-list"></div>
-                </div>
+                    <div class="cart-summary">
+                        <div class="summary-row"><span>Items</span><strong id="pos-item-count">0</strong></div>
+                        <div class="summary-row commission"><span>Your commission</span><strong id="pos-commission-preview">$0</strong></div>
+                        <div class="summary-total"><span>Total</span><strong>$<span id="total">0</span></strong></div>
+                    </div>
 
-                <div class="cart-actions">
-                    <button id="clear-cart-button-pos" class="action-button clear-cart-btn">Clear Cart</button>
-                </div>
-                <h1>Total: $<span id="total">0</span></h1>
-                <button id="checkout-button-pos" class="checkout-button">✅ Checkout</button>
-                <p id="pos-status-message" style="margin-top:15px; font-weight:bold; text-align:center;"></p>
+                    <div class="cart-buttons">
+                        <button id="clear-cart-button-pos" class="action-button clear-cart-btn">Clear</button>
+                        <button id="checkout-button-pos" class="checkout-button btn-lg">✅ Checkout</button>
+                    </div>
+                    <p id="pos-status-message" class="status-text cart-status"></p>
+                </aside>
             </div>
 
             <!-- BUY TRASH VIEW -->
-            <div id="buysell-view-container" class="content-block" style="display:none;">
-                <h1>🗑️ Buy Trash / Compost</h1>
-                <hr class="section-hr">
-                <div class="buysell-sections-container">
-                    <div class="buysell-section">
-                        <h2 style="color:#48bb78;">BUYING FROM CUSTOMER</h2>
-                        <div class="items-container buysell-items-container" id="mikes-buys-items-container"></div>
-                        <h3>Total Owed to Customer: <span id="total-owed-to-customer" style="color:#48bb78;">$0</span></h3>
+            <div id="buysell-view-container" class="pos-layout" style="display:none;">
+                <section class="content-block">
+                    <div class="panel-head">
+                        <div>
+                            <h2><span class="icon-chip">🗑️</span>Buying From Customer</h2>
+                            <p>Count what the customer is bringing in.</p>
+                        </div>
                     </div>
-                </div>
-                <hr class="section-hr">
-                <div class="buysell-summary">
+                    <div class="items-container buysell-items-container" id="mikes-buys-items-container"></div>
+                </section>
+
+                <aside class="content-block cart-panel" id="buysell-cart-panel">
                     <h2>Transaction Summary</h2>
-                    <p>Total Payout: <strong id="summary-owed-customer" style="color:#48bb78;">$0</strong></p>
-                </div>
-                <div class="cart-actions">
-                    <button id="buysell-clear-button" class="action-button clear-cart-btn">Clear</button>
-                    <button id="buysell-checkout-button" class="action-button checkout-button">✅ Checkout</button>
-                </div>
-                <p id="buysell-status-message" style="margin-top:15px; font-weight:bold; text-align:center;"></p>
+                    <div class="cart-summary" style="margin-top:0; padding-top:0; border-top:none;">
+                        <div class="summary-row"><span>Bags</span><strong id="buysell-item-count">0</strong></div>
+                        <div class="summary-row commission"><span>Your commission</span><strong id="buysell-commission-preview">$0</strong></div>
+                        <div class="summary-row"><span>Owed to customer</span><strong id="total-owed-to-customer" class="text-ok">$0</strong></div>
+                        <div class="summary-total"><span>Payout</span><strong id="summary-owed-customer">$0</strong></div>
+                    </div>
+                    <div class="cart-buttons">
+                        <button id="buysell-clear-button" class="action-button clear-cart-btn">Clear</button>
+                        <button id="buysell-checkout-button" class="action-button checkout-button btn-lg">✅ Log Purchase</button>
+                    </div>
+                    <p id="buysell-status-message" class="status-text cart-status"></p>
+                </aside>
             </div>
         </div>
-    </div>
+    </main>
 
     <!-- BACKDOOR MODAL -->
     <div id="backdoor-modal">
         <div id="backdoor-modal-content">
             <h3>🔐 Admin Access</h3>
-            <p style="color:#8a7040; font-size:0.85rem; margin-bottom:16px;">Manager backdoor login</p>
+            <p class="sub">Manager backdoor login</p>
             <input type="password" id="backdoor-password-input" placeholder="Enter admin password">
             <div class="btn-group">
-                <button id="backdoor-cancel-btn" class="action-button clear-cart-btn" style="padding:10px 20px;">Cancel</button>
-                <button id="backdoor-login-btn" class="action-button checkout-button" style="padding:10px 20px;">Enter</button>
+                <button id="backdoor-cancel-btn" class="action-button">Cancel</button>
+                <button id="backdoor-login-btn" class="action-button btn-primary">Enter</button>
             </div>
-            <p id="backdoor-error" style="color:#fc8181; font-size:0.85rem; margin-top:10px;"></p>
+            <p id="backdoor-error"></p>
         </div>
     </div>
 
-    <button id="scroll-to-bottom-btn">⬇ Checkout</button>
+    <button id="scroll-to-bottom-btn">🛒 View Cart</button>
 
     <footer>
-        <small>Pump & Dump Staff Portal · Internal Use Only</small>
+        <small>Pump &amp; Dump Staff Portal · Internal Use Only</small>
     </footer>
 </body>
 </html>

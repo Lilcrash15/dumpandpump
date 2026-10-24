@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Commission - Pump & Dump</title>
+    <link rel="icon" type="image/png" href="Logo.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="pump.css">
 
     <script type="module">
@@ -35,36 +39,32 @@
 <body class="htmlbackground">
     <div id="loading-overlay">
         <div class="loading-content">
+            <img src="Logo.png" alt="" class="loading-logo">
             <div class="spinner"></div>
-            <p>Loading Commission...</p>
+            <p>Loading Commission</p>
         </div>
     </div>
 
-    <div class="navbar">
-        <div class="dropdown">
-            <button class="logo-container">
-                <img src="Logo.png" alt="">
-            </button>
-            <div class="dropdown-content">
-                <a href="index.html">Home / POS</a>
-                <a href="commission.html">My Commission</a>
-                <a href="manager.html">Manager Portal</a>
-            </div>
+    <nav class="navbar">
+        <a href="index.html" class="nav-brand">
+            <img src="Logo.png" alt="Pump & Dump logo">
+            <span class="nav-brand-text"><strong>Pump &amp; Dump</strong><small>Staff Portal</small></span>
+        </a>
+        <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+        <div class="nav-links">
+            <a href="index.html">POS</a>
+            <a href="commission.html">My Commission</a>
+            <a href="manager.html">Manager Portal</a>
         </div>
-    </div>
+    </nav>
 
-    <div class="page-content-wrapper">
-        <header>
-            <div class="brand-header">
-                <h1>PUMP & DUMP</h1>
-                <p class="brand-tagline">Employee Staff Portal</p>
-            </div>
-        </header>
+    <main class="page-content-wrapper">
 
         <!-- LOGIN CARD -->
         <div id="commission-login-form-container" class="login-card">
+            <img src="Logo.png" alt="" class="login-logo">
             <div class="login-card-header">
-                <h2 class="login-card-title">💰 My Commission</h2>
+                <h1 class="login-card-title">My Commission</h1>
                 <p class="login-card-subtitle">Sign in to view your earnings</p>
             </div>
             <form id="commission-page-login-form" class="login-form">
@@ -78,41 +78,39 @@
                     <label for="commission-page-password">Password</label>
                     <input type="password" id="commission-page-password" autocomplete="current-password" placeholder="Enter your password">
                 </div>
-                <button type="submit" id="commission-login-submit-btn" class="login-btn" style="display:none;">Login</button>
+                <button type="submit" id="commission-login-submit-btn" class="login-btn" style="display:none;">Sign In</button>
             </form>
             <p id="commission-page-login-error" class="login-error" style="display:none;">Incorrect password. Please try again.</p>
         </div>
 
         <!-- MAIN CONTENT -->
-        <div id="commission-main-content" class="content-block" style="display:none; max-width:600px; width:100%;">
-            <h1>💰 My Commission</h1>
-            <select id="employee-commission-select" style="display:none;"></select>
-            <hr>
-            <div id="commission-details-container" style="display:none;">
-                <h2 id="selected-employee-name" style="text-align:center; border-bottom:none;">—</h2>
-                <div class="commission-container">
-                    <p class="commission-owed-display">
-                        Total Commission Owed:
-                        <strong id="total-commission-owed">$0</strong>
-                    </p>
-                    <p class="account-info">
-                        Transactions: <strong id="transaction-count">0</strong>
-                    </p>
-                    <p class="account-info">
-                        Player ID: <strong id="employee-player-id">—</strong>
-                    </p>
+        <div id="commission-main-content" style="display:none; max-width:560px; margin:0 auto;">
+            <div id="commission-details-container" class="content-block commission-hero" style="display:none;">
+                <span class="avatar" id="commission-initials">?</span>
+                <h1 id="selected-employee-name">—</h1>
+
+                <p class="commission-label">Commission Owed</p>
+                <strong id="total-commission-owed">$0</strong>
+
+                <div class="commission-stats">
+                    <div class="stat">
+                        <div class="stat-label">Unpaid Transactions</div>
+                        <div class="stat-value" id="transaction-count">0</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Player ID</div>
+                        <div class="stat-value" id="employee-player-id">—</div>
+                    </div>
                 </div>
-                <hr style="border-color:#3a2e10; margin:20px 0;">
-                <p id="commission-status-message" style="margin-top:10px; text-align:center; font-weight:600;"></p>
-                <p style="font-size:0.8rem; color:#6a5030; text-align:center; margin-top:8px;">
-                    Only managers can mark commission as paid.
-                </p>
+
+                <p id="commission-status-message" class="status-text"></p>
+                <p class="fine-print">Only managers can mark commission as paid.</p>
             </div>
         </div>
-    </div>
+    </main>
 
     <footer>
-        <small>Pump & Dump Staff Portal · Internal Use Only</small>
+        <small>Pump &amp; Dump Staff Portal · Internal Use Only</small>
     </footer>
 </body>
 </html>

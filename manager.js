@@ -5,11 +5,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     let appLogicHasRun = false;
+    let managerContentStarted = false;
     let db, firestore;
 
     // ===== FIREBASE BYPASS MODE =====
     // Set to true to skip Firebase and use the app without a database.
-    // Flip back to false once Firebase credentials are added.
     const FIREBASE_BYPASS = false;
 
     function buildBypassFirebase() {
@@ -34,6 +34,27 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
+    function setStatus(el, text, kind) {
+        if (!el) return;
+        el.textContent = text;
+        el.classList.remove('ok', 'err');
+        if (kind) el.classList.add(kind);
+    }
+
+    // ===== TABS =====
+    const TAB_KEY = 'pd_managerTab';
+    const tabButtons = document.querySelectorAll('.tab-bar button[data-tab]');
+    const tabPanels = document.querySelectorAll('.tab-panel[data-panel]');
+    function showTab(name) {
+        let found = false;
+        tabButtons.forEach(b => { const on = b.dataset.tab === name; b.classList.toggle('active', on); if (on) found = true; });
+        if (!found) return showTab('employees');
+        tabPanels.forEach(p => p.classList.toggle('active', p.dataset.panel === name));
+        try { localStorage.setItem(TAB_KEY, name); } catch (e) { /* ignore */ }
+    }
+    tabButtons.forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
+    try { const saved = localStorage.getItem(TAB_KEY); if (saved) showTab(saved); } catch (e) { /* ignore */ }
+
     const managerLoginWrapper = document.getElementById('manager-login-wrapper');
     const managerLoginForm = document.getElementById('manager-page-login-form');
     const managerLoginSelect = document.getElementById('manager-login-select');
@@ -42,10 +63,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const managerLoginSubmitBtn = document.getElementById('manager-login-submit-btn');
     const managerLoginError = document.getElementById('manager-page-login-error');
     const managerContent = document.getElementById('manager-content');
+    const welcomeName = document.getElementById('manager-welcome-name');
 
     const BACKDOOR_PASSWORD = "PumpAdmin2025"; // Must match script.js
 
-    // Backdoor
+    // ===== BACKDOOR =====
     const backdoorTrigger = document.getElementById('backdoor-trigger');
     const backdoorModal = document.getElementById('backdoor-modal');
     const backdoorPasswordInput = document.getElementById('backdoor-password-input');
@@ -84,6 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isLoggedIn) {
             if (managerLoginWrapper) managerLoginWrapper.style.display = 'none';
             if (managerContent) managerContent.style.display = 'block';
+            if (welcomeName) welcomeName.textContent = (localStorage.getItem('loggedInEmployeeName') || 'Manager').split(' ')[0];
             if (typeof addLogoutButton === 'function') addLogoutButton();
         } else {
             if (managerLoginWrapper) managerLoginWrapper.style.display = 'block';
@@ -97,7 +120,6 @@ document.addEventListener('DOMContentLoaded', () => {
         db = firebaseDetail.db;
         firestore = firebaseDetail.functions;
 
-        // Load employees for login
         let allEmployees = [];
         async function loadAllEmployees() {
             try {
@@ -109,7 +131,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         await loadAllEmployees();
 
-        // Populate manager login select
         if (managerLoginSelect) {
             managerLoginSelect.innerHTML = '<option value="">— Select Your Name —</option>';
             allEmployees.filter(e => e.isManager).forEach(emp => {
@@ -121,8 +142,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             managerLoginSelect.addEventListener('change', () => {
                 if (managerLoginSelect.value) {
-                    managerPasswordGroup.style.display = 'block';
-                    managerLoginSubmitBtn.style.display = 'block';
+                    managerPasswordGroup.style.display = 'flex';
+                    managerLoginSubmitBtn.style.display = 'flex';
                     managerPasswordInput.value = '';
                     managerPasswordInput.focus();
                     managerLoginError.style.display = 'none';
@@ -151,7 +172,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Check existing session
         if (typeof checkManagerSession === 'function' && checkManagerSession()) {
             updateManagerView(true);
             initManagerContent();
@@ -161,6 +181,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function initManagerContent() {
+        if (managerContentStarted) return;
+        managerContentStarted = true;
+
         // ===== EMPLOYEE MANAGEMENT =====
         const empFormTitle = document.getElementById('employee-form-title');
         const editEmpIdInput = document.getElementById('edit-employee-id');
@@ -173,6 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const cancelEmpBtn = document.getElementById('cancel-edit-button');
         const empStatusMsg = document.getElementById('employee-status-message');
         const empListDisplay = document.getElementById('employee-list-display');
+        const empCountLabel = document.getElementById('employee-count-label');
 
         let editingEmpId = null;
 
@@ -182,22 +206,32 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const q = firestore.query(firestore.collection(db, "pd_employees"), firestore.orderBy("fullName"));
                 const snap = await firestore.getDocs(q);
-                if (snap.empty) { empListDisplay.innerHTML = '<p class="loading-message">No employees yet. Add one above.</p>'; return; }
+                if (empCountLabel) {
+                    const total = snap.docs.length;
+                    const mgrs = snap.docs.filter(d => d.data().isManager).length;
+                    empCountLabel.textContent = `${total} employee${total === 1 ? '' : 's'} · ${mgrs} with manager access`;
+                }
+                if (snap.empty) { empListDisplay.innerHTML = '<p class="loading-message">No employees yet. Add one with the form.</p>'; return; }
                 empListDisplay.innerHTML = '';
                 snap.forEach(docSnap => {
                     const emp = { id: docSnap.id, ...docSnap.data() };
+                    const rank = emp.rank || 'Employee';
                     const div = document.createElement('div');
                     div.className = 'employee-list-item';
                     div.innerHTML = `
-                        <div>
-                            <div class="emp-name">${emp.fullName} ${emp.isManager ? '<span class="emp-badge is-manager">🔑 Manager</span>' : '<span class="emp-badge">👷 Employee</span>'}</div>
-                            <div class="emp-meta">
-                                Rank: ${emp.rank || 'Employee'} &nbsp;|&nbsp; Player ID: ${emp.playerId || emp.playerID || '—'}
+                        <div class="emp-left">
+                            <span class="avatar">${esc(initials(emp.fullName))}</span>
+                            <div>
+                                <div class="emp-name">${esc(emp.fullName)}
+                                    ${rank === 'Owner' ? '<span class="emp-badge is-owner">Owner</span>' : ''}
+                                    ${emp.isManager ? '<span class="emp-badge is-manager">Manager access</span>' : ''}
+                                </div>
+                                <div class="emp-meta">${esc(rank)} · Player ID: ${esc(emp.playerId || emp.playerID || '—')}</div>
                             </div>
                         </div>
                         <div class="emp-actions">
-                            <button class="action-button edit-btn" data-id="${emp.id}">✏️ Edit</button>
-                            <button class="action-button delete-btn" data-id="${emp.id}">🗑️ Delete</button>
+                            <button class="action-button btn-sm edit-btn">✏️ Edit</button>
+                            <button class="action-button btn-sm delete-btn">🗑️</button>
                         </div>
                     `;
                     div.querySelector('.edit-btn').addEventListener('click', () => startEditEmployee(emp));
@@ -206,7 +240,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             } catch (err) {
                 console.error("Error loading employees:", err);
-                empListDisplay.innerHTML = '<p style="color:#fc8181;">Error loading employees.</p>';
+                empListDisplay.innerHTML = '<p class="text-err">Error loading employees.</p>';
             }
         }
 
@@ -218,10 +252,10 @@ document.addEventListener('DOMContentLoaded', () => {
             empPlayerIdInput.value = emp.playerId || emp.playerID || '';
             empRankSelect.value = emp.rank || 'Employee';
             empIsManagerCheckbox.checked = emp.isManager || false;
-            empPasswordInput.value = ''; // Don't show existing password
+            empPasswordInput.value = '';
             empPasswordInput.placeholder = 'Leave blank to keep current password';
-            cancelEmpBtn.style.display = 'inline-block';
-            empStatusMsg.textContent = '';
+            cancelEmpBtn.style.display = 'inline-flex';
+            setStatus(empStatusMsg, '');
             empFullNameInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
@@ -236,10 +270,9 @@ document.addEventListener('DOMContentLoaded', () => {
             empPasswordInput.value = '';
             empPasswordInput.placeholder = 'Set employee\'s login password';
             cancelEmpBtn.style.display = 'none';
-            empStatusMsg.textContent = '';
         }
 
-        cancelEmpBtn?.addEventListener('click', resetForm);
+        cancelEmpBtn?.addEventListener('click', () => { resetForm(); setStatus(empStatusMsg, ''); });
 
         saveEmpBtn?.addEventListener('click', async () => {
             const fullName = empFullNameInput.value.trim();
@@ -248,31 +281,31 @@ document.addEventListener('DOMContentLoaded', () => {
             const isManager = empIsManagerCheckbox.checked;
             const password = empPasswordInput.value.trim();
 
-            if (!fullName) { empStatusMsg.textContent = 'Full name is required.'; empStatusMsg.style.color = '#fc8181'; return; }
-            if (!editingEmpId && !password) { empStatusMsg.textContent = 'Password is required for new employees.'; empStatusMsg.style.color = '#fc8181'; return; }
+            if (!fullName) { setStatus(empStatusMsg, 'Full name is required.', 'err'); return; }
+            if (!editingEmpId && !password) { setStatus(empStatusMsg, 'Password is required for new employees.', 'err'); return; }
 
             saveEmpBtn.disabled = true;
-            empStatusMsg.textContent = 'Saving...';
+            setStatus(empStatusMsg, 'Saving...');
 
             try {
                 const data = { fullName, playerId, rank, isManager, updatedAt: firestore.serverTimestamp() };
                 if (password) data.loginPassword = password;
 
+                let msg;
                 if (editingEmpId) {
                     await firestore.updateDoc(firestore.doc(db, "pd_employees", editingEmpId), data);
-                    empStatusMsg.textContent = `✅ ${fullName} updated!`;
+                    msg = `✅ ${fullName} updated!`;
                 } else {
                     data.createdAt = firestore.serverTimestamp();
                     await firestore.addDoc(firestore.collection(db, "pd_employees"), data);
-                    empStatusMsg.textContent = `✅ ${fullName} added!`;
+                    msg = `✅ ${fullName} added!`;
                 }
-                empStatusMsg.style.color = '#48bb78';
                 resetForm();
+                setStatus(empStatusMsg, msg, 'ok');
                 await loadAndRenderEmployees();
             } catch (err) {
                 console.error("Error saving employee:", err);
-                empStatusMsg.textContent = 'Error saving. Please try again.';
-                empStatusMsg.style.color = '#fc8181';
+                setStatus(empStatusMsg, 'Error saving. Please try again.', 'err');
             } finally {
                 saveEmpBtn.disabled = false;
             }
@@ -290,23 +323,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const commissionSummaryList = document.getElementById('commission-summary-list');
         const commissionRefreshBtn = document.getElementById('commission-summary-refresh-btn');
         const commissionLastUpdated = document.getElementById('commission-summary-last-updated');
+        const statOutstanding = document.getElementById('stat-outstanding');
+        const statOutstandingHint = document.getElementById('stat-outstanding-hint');
 
         async function loadCommissionSummary() {
             if (!commissionSummaryList) return;
             commissionSummaryList.innerHTML = '<p class="loading-message">Loading...</p>';
             try {
-                // Get all employees
                 const empSnap = await firestore.getDocs(firestore.query(firestore.collection(db, "pd_employees"), firestore.orderBy("fullName")));
                 const employees = empSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-                // Get all uncleared sale transactions
                 const txQuery = firestore.query(
                     firestore.collection(db, "pd_transactions"),
                     firestore.where("commissionCleared", "==", false)
                 );
                 const txSnap = await firestore.getDocs(txQuery);
 
-                // Aggregate per employee
                 const commByEmp = {};
                 txSnap.forEach(d => {
                     const tx = d.data();
@@ -315,46 +347,48 @@ document.addEventListener('DOMContentLoaded', () => {
                     commByEmp[tx.employeeName].txIds.push(d.id);
                 });
 
+                const grandTotal = Object.values(commByEmp).reduce((s, x) => s + x.total, 0);
+                const owedCount = Object.values(commByEmp).filter(x => x.total > 0).length;
+                if (statOutstanding) statOutstanding.textContent = money(grandTotal);
+                if (statOutstandingHint) statOutstandingHint.textContent = owedCount ? `${owedCount} employee${owedCount === 1 ? '' : 's'} waiting` : 'everyone is paid up';
+                if (commissionLastUpdated) commissionLastUpdated.textContent = 'Updated ' + new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
                 if (Object.keys(commByEmp).length === 0) {
-                    commissionSummaryList.innerHTML = '<p style="color:#48bb78;">✅ All commissions are paid up!</p>';
-                    if (commissionLastUpdated) commissionLastUpdated.textContent = 'Updated: ' + new Date().toLocaleTimeString();
+                    commissionSummaryList.innerHTML = '<div class="all-paid">✅ All commissions are paid up!</div>';
                     return;
                 }
 
                 commissionSummaryList.innerHTML = '';
-                for (const [empName, data] of Object.entries(commByEmp)) {
+                const sorted = Object.entries(commByEmp).sort((a, b) => b[1].total - a[1].total);
+                for (const [empName, data] of sorted) {
                     const empData = employees.find(e => e.fullName === empName);
                     const row = document.createElement('div');
                     row.className = 'commission-summary-row';
                     row.innerHTML = `
                         <div class="commission-summary-name">
-                            <div class="commission-summary-dot"></div>
+                            <span class="avatar">${esc(initials(empName))}</span>
                             <div>
-                                <div style="font-weight:700; color:#f0e8d0;">${empName}</div>
-                                <div style="font-size:0.78rem; color:#8a7040;">${empData?.rank || 'Employee'} · ${data.txIds.length} sale(s) · Player ID: ${empData?.playerId || '—'}</div>
+                                <div style="font-weight:700;">${esc(empName)}</div>
+                                <div class="emp-meta">${esc(empData?.rank || 'Employee')} · ${data.txIds.length} transaction${data.txIds.length === 1 ? '' : 's'} · Player ID: ${esc(empData?.playerId || '—')}</div>
                             </div>
                         </div>
                         <div class="commission-summary-amount">
-                            <span>$${data.total.toLocaleString()}</span>
-                            <span class="commission-summary-count">${data.txIds.length} transactions</span>
-                            <button class="action-button checkout-button mark-paid-btn" data-name="${empName}" data-ids='${JSON.stringify(data.txIds)}' data-total="${data.total}" style="padding:6px 14px; font-size:0.82rem; margin-top:6px;">
-                                ✅ Mark Paid
-                            </button>
+                            <span class="commission-amount-value">${money(data.total)}</span>
+                            <button class="action-button checkout-button btn-sm mark-paid-btn">✅ Mark Paid</button>
                         </div>
                     `;
-                    row.querySelector('.mark-paid-btn').addEventListener('click', async function() {
-                        const empN = this.dataset.name;
-                        const txIds = JSON.parse(this.dataset.ids);
-                        const total = parseFloat(this.dataset.total);
-                        if (!confirm(`Mark $${total.toLocaleString()} commission as paid for ${empN}?`)) return;
-                        this.disabled = true;
-                        this.textContent = 'Processing...';
+                    const btn = row.querySelector('.mark-paid-btn');
+                    btn.addEventListener('click', async () => {
+                        const txIds = data.txIds;
+                        const total = data.total;
+                        if (!confirm(`Mark ${money(total)} commission as paid for ${empName}?`)) return;
+                        btn.disabled = true;
+                        btn.textContent = 'Processing...';
                         try {
                             const updates = txIds.map(id => firestore.updateDoc(firestore.doc(db, "pd_transactions", id), { commissionCleared: true }));
                             await Promise.all(updates);
-                            // Log the payment
                             await firestore.addDoc(firestore.collection(db, "pd_commission_logs"), {
-                                employeeName: empN,
+                                employeeName: empName,
                                 totalPaid: total,
                                 transactionIds: txIds,
                                 paidBy: localStorage.getItem('loggedInEmployeeName') || 'Manager',
@@ -362,55 +396,175 @@ document.addEventListener('DOMContentLoaded', () => {
                             });
                             await loadCommissionSummary();
                             await renderCommissionLogs();
+                            await loadTransactions();
                         } catch (err) {
                             console.error("Error marking paid:", err);
                             alert("Error marking as paid.");
-                            this.disabled = false;
-                            this.textContent = '✅ Mark Paid';
+                            btn.disabled = false;
+                            btn.textContent = '✅ Mark Paid';
                         }
                     });
                     commissionSummaryList.appendChild(row);
                 }
-                if (commissionLastUpdated) commissionLastUpdated.textContent = 'Updated: ' + new Date().toLocaleTimeString();
             } catch (err) {
                 console.error("Error loading commission summary:", err);
-                commissionSummaryList.innerHTML = '<p style="color:#fc8181;">Error loading data. Check console (F12) — Firestore index may be required.</p>';
+                commissionSummaryList.innerHTML = '<p class="text-err">Error loading data. Check console (F12) — a Firestore index may be required.</p>';
             }
         }
 
         commissionRefreshBtn?.addEventListener('click', loadCommissionSummary);
 
+        // ===== SHIFT NOTE =====
+        const noteInput = document.getElementById('shift-note-input');
+        const notePreviewWrap = document.getElementById('shift-note-preview-wrap');
+        const notePreview = document.getElementById('shift-note-live-preview');
+        const noteCurrent = document.getElementById('current-shift-note-display');
+        const noteStatus = document.getElementById('shift-note-status');
+        const postNoteBtn = document.getElementById('post-shift-note-btn');
+        const clearNoteBtn = document.getElementById('clear-shift-note-btn');
+        const noteRef = () => firestore.doc(db, SHIFT_NOTE_COLLECTION, SHIFT_NOTE_DOC);
+
+        function updateNotePreview() {
+            if (!noteInput) return;
+            if (noteInput.value.trim()) {
+                notePreviewWrap.style.display = 'block';
+                notePreview.innerHTML = sanitizeNoteHtml(noteInput.value);
+            } else {
+                notePreviewWrap.style.display = 'none';
+            }
+        }
+
+        function wrapSelection(openTag, closeTag) {
+            const start = noteInput.selectionStart;
+            const end = noteInput.selectionEnd;
+            const selected = noteInput.value.substring(start, end);
+            noteInput.setRangeText(openTag + (selected || 'text') + closeTag, start, end, 'end');
+            noteInput.focus();
+            updateNotePreview();
+        }
+
+        noteInput?.addEventListener('input', updateNotePreview);
+
+        document.querySelectorAll('.note-fmt-btn[data-tag]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tag = btn.dataset.tag;
+                wrapSelection(`<${tag}>`, `</${tag}>`);
+            });
+        });
+
+        const sizeInput = document.getElementById('note-font-size');
+        document.getElementById('note-apply-size')?.addEventListener('click', () => {
+            let size = parseInt(sizeInput.value);
+            if (isNaN(size)) size = 16;
+            size = Math.min(SHIFT_NOTE_MAX_SIZE, Math.max(SHIFT_NOTE_MIN_SIZE, size));
+            sizeInput.value = size;
+            wrapSelection(`<span style="font-size:${size}px;">`, `</span>`);
+        });
+
+        const colorPicker = document.getElementById('note-color-picker');
+        document.getElementById('note-apply-color')?.addEventListener('click', () => {
+            wrapSelection(`<span style="color:${colorPicker.value};">`, `</span>`);
+        });
+
+        async function loadCurrentShiftNote() {
+            if (!noteCurrent) return;
+            try {
+                const snap = await firestore.getDoc(noteRef());
+                const d = snap.exists() ? snap.data() : null;
+                if (d && (d.text || '').trim()) {
+                    const ts = formatTimestamp(d.postedAt);
+                    noteCurrent.classList.remove('empty');
+                    noteCurrent.innerHTML = `
+                        <div class="shift-note-render">${sanitizeNoteHtml(d.text)}</div>
+                        <span class="note-current-meta">Posted by <strong>${esc(d.postedBy || 'Unknown')}</strong>${ts ? ' · ' + esc(ts) : ''}</span>`;
+                } else {
+                    noteCurrent.classList.add('empty');
+                    noteCurrent.textContent = 'No active shift note.';
+                }
+            } catch (e) {
+                console.error('Error loading shift note:', e);
+                noteCurrent.classList.add('empty');
+                noteCurrent.innerHTML = '<span class="text-err">Error loading note. Check the Firestore rules allow the pd_settings collection.</span>';
+            }
+        }
+
+        postNoteBtn?.addEventListener('click', async () => {
+            const text = noteInput ? noteInput.value.trim() : '';
+            if (!text) { setStatus(noteStatus, 'Please enter a note.', 'err'); return; }
+            const postedBy = localStorage.getItem('loggedInEmployeeName') || 'Manager';
+            postNoteBtn.disabled = true;
+            try {
+                await firestore.setDoc(noteRef(), { text, postedBy, postedAt: firestore.serverTimestamp() });
+                noteInput.value = '';
+                updateNotePreview();
+                setStatus(noteStatus, '✓ Note posted!', 'ok');
+                setTimeout(() => setStatus(noteStatus, ''), 3000);
+                await loadCurrentShiftNote();
+            } catch (e) {
+                console.error('Error posting shift note:', e);
+                setStatus(noteStatus, 'Error posting note.', 'err');
+            } finally {
+                postNoteBtn.disabled = false;
+            }
+        });
+
+        clearNoteBtn?.addEventListener('click', async () => {
+            if (!confirm('Clear the current shift note? Employees will no longer see it.')) return;
+            try {
+                await firestore.setDoc(noteRef(), { text: '', postedBy: '', postedAt: firestore.serverTimestamp() });
+                setStatus(noteStatus, '✓ Note cleared.', 'ok');
+                setTimeout(() => setStatus(noteStatus, ''), 3000);
+                await loadCurrentShiftNote();
+            } catch (e) {
+                console.error('Error clearing shift note:', e);
+                setStatus(noteStatus, 'Error clearing note.', 'err');
+            }
+        });
+
         // ===== TRANSACTION LOG =====
         const transactionsDisplay = document.getElementById('transactions-display');
         const exportTransactionsBtn = document.getElementById('export-transactions-btn');
+        const statRevenue = document.getElementById('stat-revenue');
+        const statRevenueHint = document.getElementById('stat-revenue-hint');
+        const statBizCut = document.getElementById('stat-bizcut');
 
         async function loadTransactions() {
             if (!transactionsDisplay) return;
-            transactionsDisplay.innerHTML = '<p class="loading-message">Loading...</p>';
+            transactionsDisplay.innerHTML = '<p class="loading-message" style="padding:14px;">Loading...</p>';
             try {
                 const q = firestore.query(firestore.collection(db, "pd_transactions"), firestore.orderBy("createdAt", "desc"));
                 const snap = await firestore.getDocs(q);
-                if (snap.empty) { transactionsDisplay.innerHTML = '<p class="loading-message">No transactions yet.</p>'; return; }
+
+                let revenue = 0, bizCut = 0, saleCount = 0;
+                snap.forEach(d => {
+                    const tx = d.data();
+                    if (tx.type === 'sale') { revenue += tx.totalRevenue || 0; bizCut += tx.totalBizCut || 0; saleCount++; }
+                });
+                if (statRevenue) statRevenue.textContent = money(revenue);
+                if (statRevenueHint) statRevenueHint.textContent = `${saleCount} sale${saleCount === 1 ? '' : 's'} all time`;
+                if (statBizCut) statBizCut.textContent = money(bizCut);
+
+                if (snap.empty) { transactionsDisplay.innerHTML = '<p class="loading-message" style="padding:14px;">No transactions yet.</p>'; return; }
 
                 const table = document.createElement('table');
                 table.innerHTML = `<thead><tr>
                     <th>Date</th><th>Employee</th><th>Type</th><th>Items</th>
-                    <th>Total Revenue</th><th>Emp Commission</th><th>Commission Paid?</th>
+                    <th>Revenue</th><th>Commission</th><th>Status</th>
                 </tr></thead>`;
                 const tbody = document.createElement('tbody');
                 snap.forEach(d => {
                     const tx = d.data();
                     const date = tx.createdAt?.toDate?.()?.toLocaleString() || '—';
-                    const items = (tx.items || []).map(i => `${i.productName || i.itemName}(x${i.qty})`).join(', ');
+                    const items = (tx.items || []).map(i => `${i.productName || i.itemName} ×${i.qty}`).join(', ');
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
-                        <td>${date}</td>
-                        <td>${tx.employeeName || '—'}</td>
-                        <td>${tx.type === 'sale' ? '🛒 Sale' : '🗑️ Purchase'}</td>
-                        <td style="font-size:0.8rem;">${items || '—'}</td>
-                        <td>$${(tx.totalRevenue || 0).toLocaleString()}</td>
-                        <td style="color:#d4a847;">$${(tx.totalEmpCommission || 0).toLocaleString()}</td>
-                        <td>${tx.commissionCleared ? '<span style="color:#48bb78;">✅ Paid</span>' : '<span style="color:#fc8181;">⏳ Owed</span>'}</td>
+                        <td class="td-num muted">${esc(date)}</td>
+                        <td>${esc(tx.employeeName || '—')}</td>
+                        <td>${tx.type === 'sale' ? '<span class="pill pill-sale">🛒 Sale</span>' : '<span class="pill pill-buy">🗑️ Purchase</span>'}</td>
+                        <td class="td-items">${esc(items || '—')}</td>
+                        <td class="td-num">${tx.type === 'sale' ? money(tx.totalRevenue) : `<span class="muted">Paid out ${money(tx.totalPayout)}</span>`}</td>
+                        <td class="td-num text-warn">${money(tx.totalEmpCommission)}</td>
+                        <td>${tx.commissionCleared ? '<span class="pill pill-ok">Paid</span>' : '<span class="pill pill-warn">Owed</span>'}</td>
                     `;
                     tbody.appendChild(tr);
                 });
@@ -419,28 +573,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 transactionsDisplay.appendChild(table);
             } catch (err) {
                 console.error("Error loading transactions:", err);
-                transactionsDisplay.innerHTML = '<p style="color:#fc8181;">Error loading transactions.</p>';
+                transactionsDisplay.innerHTML = '<p class="text-err" style="padding:14px;">Error loading transactions.</p>';
             }
         }
+
+        function downloadCsv(rows, filename) {
+            const csv = rows.map(r => r.join(',')).join('\n');
+            const blob = new Blob(["﻿" + csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = filename; a.click();
+            URL.revokeObjectURL(url);
+        }
+        const csvCell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
 
         exportTransactionsBtn?.addEventListener('click', async () => {
             try {
                 const q = firestore.query(firestore.collection(db, "pd_transactions"), firestore.orderBy("createdAt", "desc"));
                 const snap = await firestore.getDocs(q);
                 if (snap.empty) { alert("No transactions to export."); return; }
-                const rows = [["Date", "Employee", "Type", "Items", "Total Revenue", "Emp Commission", "Commission Paid"]];
+                const rows = [["Date", "Employee", "Type", "Items", "Total Revenue", "Customer Payout", "Emp Commission", "Business Cut", "Commission Paid"]];
                 snap.forEach(d => {
                     const tx = d.data();
                     const date = tx.createdAt?.toDate?.()?.toLocaleString() || '';
                     const items = (tx.items || []).map(i => `${i.productName || i.itemName}(x${i.qty})`).join('; ');
-                    rows.push([`"${date}"`, `"${tx.employeeName}"`, tx.type, `"${items}"`, tx.totalRevenue || 0, tx.totalEmpCommission || 0, tx.commissionCleared ? 'Yes' : 'No']);
+                    rows.push([csvCell(date), csvCell(tx.employeeName), tx.type, csvCell(items), tx.totalRevenue || 0, tx.totalPayout || 0, tx.totalEmpCommission || 0, tx.totalBizCut || 0, tx.commissionCleared ? 'Yes' : 'No']);
                 });
-                const csv = rows.map(r => r.join(',')).join('\n');
-                const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url; a.download = 'pump_dump_transactions.csv'; a.click();
-                URL.revokeObjectURL(url);
+                downloadCsv(rows, 'pump_dump_transactions.csv');
             } catch (err) { alert("Export error."); }
         });
 
@@ -450,24 +609,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async function renderCommissionLogs() {
             if (!commissionLogsDisplay) return;
-            commissionLogsDisplay.innerHTML = '<p class="loading-message">Loading...</p>';
+            commissionLogsDisplay.innerHTML = '<p class="loading-message" style="padding:14px;">Loading...</p>';
             try {
                 const q = firestore.query(firestore.collection(db, "pd_commission_logs"), firestore.orderBy("paidAt", "desc"));
                 const snap = await firestore.getDocs(q);
-                if (snap.empty) { commissionLogsDisplay.innerHTML = '<p class="loading-message">No payment logs yet.</p>'; return; }
+                if (snap.empty) { commissionLogsDisplay.innerHTML = '<p class="loading-message" style="padding:14px;">No payment logs yet.</p>'; return; }
                 const table = document.createElement('table');
-                table.innerHTML = `<thead><tr><th>Date Paid</th><th>Employee</th><th>Amount Paid</th><th>Paid By</th><th># Transactions</th></tr></thead>`;
+                table.innerHTML = `<thead><tr><th>Date Paid</th><th>Employee</th><th>Amount</th><th>Paid By</th><th>Transactions</th></tr></thead>`;
                 const tbody = document.createElement('tbody');
                 snap.forEach(d => {
                     const log = d.data();
                     const date = log.paidAt?.toDate?.()?.toLocaleString() || '—';
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
-                        <td>${date}</td>
-                        <td>${log.employeeName || '—'}</td>
-                        <td style="color:#48bb78; font-weight:700;">$${(log.totalPaid || 0).toLocaleString()}</td>
-                        <td>${log.paidBy || '—'}</td>
-                        <td>${(log.transactionIds || []).length}</td>
+                        <td class="td-num muted">${esc(date)}</td>
+                        <td>${esc(log.employeeName || '—')}</td>
+                        <td class="td-num text-ok" style="font-weight:700;">${money(log.totalPaid)}</td>
+                        <td>${esc(log.paidBy || '—')}</td>
+                        <td class="td-num">${(log.transactionIds || []).length}</td>
                     `;
                     tbody.appendChild(tr);
                 });
@@ -475,7 +634,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 commissionLogsDisplay.innerHTML = '';
                 commissionLogsDisplay.appendChild(table);
             } catch (err) {
-                commissionLogsDisplay.innerHTML = '<p style="color:#fc8181;">Error loading logs.</p>';
+                commissionLogsDisplay.innerHTML = '<p class="text-err" style="padding:14px;">Error loading logs.</p>';
             }
         }
 
@@ -487,71 +646,57 @@ document.addEventListener('DOMContentLoaded', () => {
                 const rows = [["Date Paid", "Employee", "Amount Paid", "Paid By", "Transaction Count"]];
                 snap.forEach(d => {
                     const log = d.data();
-                    rows.push([`"${log.paidAt?.toDate?.()?.toLocaleString()}"`, `"${log.employeeName}"`, log.totalPaid || 0, `"${log.paidBy}"`, (log.transactionIds || []).length]);
+                    rows.push([csvCell(log.paidAt?.toDate?.()?.toLocaleString()), csvCell(log.employeeName), log.totalPaid || 0, csvCell(log.paidBy), (log.transactionIds || []).length]);
                 });
-                const csv = rows.map(r => r.join(',')).join('\n');
-                const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url; a.download = 'pump_dump_commission_log.csv'; a.click();
-                URL.revokeObjectURL(url);
+                downloadCsv(rows, 'pump_dump_commission_log.csv');
             } catch (err) { alert("Export error."); }
         });
 
-
-
         // ===== COMPOST INVENTORY =====
-        // Defined inside initManagerContent so it closes over the correct db/firestore
-        async function loadCompostInventory() {
-            const display = document.getElementById('compost-stock-display');
-            const input = document.getElementById('compost-stock-input');
-            const saveBtn = document.getElementById('compost-stock-save-btn');
-            const statusMsg = document.getElementById('compost-stock-status');
-            if (!display) return;
+        const compostDisplay = document.getElementById('compost-stock-display');
+        const compostInput = document.getElementById('compost-stock-input');
+        const compostSaveBtn = document.getElementById('compost-stock-save-btn');
+        const compostStatus = document.getElementById('compost-stock-status');
+        const statCompost = document.getElementById('stat-compost');
 
+        function showCompost(n) {
+            if (compostDisplay) { compostDisplay.textContent = n; compostDisplay.className = n > 0 ? 'text-ok' : 'text-err'; }
+            if (statCompost) { statCompost.textContent = n; statCompost.className = 'stat-value ' + (n > 0 ? '' : 'text-err'); }
+        }
+
+        async function loadCompostInventory() {
             try {
-                const docRef = firestore.doc(db, "pd_inventory", "bag_of_compost");
-                const snap = await firestore.getDoc(docRef);
+                const snap = await firestore.getDoc(firestore.doc(db, "pd_inventory", "bag_of_compost"));
                 const current = snap.exists() ? (snap.data().stock ?? 0) : 0;
-                display.textContent = current;
-                display.style.color = current > 0 ? '#48bb78' : '#fc8181';
-                if (input) input.value = current;
+                showCompost(current);
+                if (compostInput) compostInput.value = current;
             } catch (e) {
                 console.warn("Could not load compost stock:", e);
-                if (display) display.textContent = '—';
+                if (compostDisplay) compostDisplay.textContent = '—';
             }
-
-            // Remove any old listener before adding a new one (prevents duplicates on re-init)
-            const newSaveBtn = saveBtn?.cloneNode(true);
-            if (saveBtn && newSaveBtn) saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
-
-            newSaveBtn?.addEventListener('click', async () => {
-                const currentInput = document.getElementById('compost-stock-input');
-                const currentDisplay = document.getElementById('compost-stock-display');
-                const currentStatus = document.getElementById('compost-stock-status');
-                const newStock = parseInt(currentInput?.value);
-                if (isNaN(newStock) || newStock < 0) {
-                    if (currentStatus) { currentStatus.textContent = 'Enter a valid number.'; currentStatus.style.color = '#fc8181'; }
-                    return;
-                }
-                newSaveBtn.disabled = true;
-                if (currentStatus) currentStatus.textContent = 'Saving...';
-                try {
-                    const docRef = firestore.doc(db, "pd_inventory", "bag_of_compost");
-                    await firestore.setDoc(docRef, { stock: newStock, updatedAt: firestore.serverTimestamp() });
-                    if (currentDisplay) { currentDisplay.textContent = newStock; currentDisplay.style.color = newStock > 0 ? '#48bb78' : '#fc8181'; }
-                    if (currentStatus) { currentStatus.textContent = `✅ Stock updated to ${newStock}.`; currentStatus.style.color = '#48bb78'; }
-                } catch (err) {
-                    console.error("Error saving stock:", err);
-                    if (currentStatus) { currentStatus.textContent = 'Error saving. Try again.'; currentStatus.style.color = '#fc8181'; }
-                } finally {
-                    newSaveBtn.disabled = false;
-                }
-            });
         }
+
+        compostSaveBtn?.addEventListener('click', async () => {
+            const newStock = parseInt(compostInput?.value);
+            if (isNaN(newStock) || newStock < 0) { setStatus(compostStatus, 'Enter a valid number.', 'err'); return; }
+            compostSaveBtn.disabled = true;
+            setStatus(compostStatus, 'Saving...');
+            try {
+                await firestore.setDoc(firestore.doc(db, "pd_inventory", "bag_of_compost"), { stock: newStock, updatedAt: firestore.serverTimestamp() });
+                showCompost(newStock);
+                setStatus(compostStatus, `✅ Stock updated to ${newStock}.`, 'ok');
+            } catch (err) {
+                console.error("Error saving stock:", err);
+                setStatus(compostStatus, 'Error saving. Try again.', 'err');
+            } finally {
+                compostSaveBtn.disabled = false;
+            }
+        });
 
         // Auto-load everything
         loadAndRenderEmployees();
         loadCommissionSummary();
+        loadCurrentShiftNote();
         loadTransactions();
         renderCommissionLogs();
         loadCompostInventory();
@@ -560,8 +705,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let processed = false;
 
     if (FIREBASE_BYPASS) {
-        const bypass = buildBypassFirebase();
-        executeManagerAppLogic(bypass);
+        executeManagerAppLogic(buildBypassFirebase());
+    } else if (window.isFirebaseReady && window.db && window.firestoreFunctions) {
+        // Firebase usually finishes before this script runs — start right away instead of waiting on the timeout
+        processed = true;
+        executeManagerAppLogic({ db: window.db, functions: window.firestoreFunctions });
     } else {
         document.addEventListener('firebaseReady', (e) => {
             if (!processed) { processed = true; executeManagerAppLogic(e.detail); }
@@ -571,8 +719,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         setTimeout(() => {
             if (!processed) {
+                processed = true;
                 if (window.isFirebaseReady && window.db) executeManagerAppLogic({ db: window.db, functions: window.firestoreFunctions });
-                else { processed = true; hideLoadingScreen(); }
+                else hideLoadingScreen();
             }
         }, 3500);
     }
