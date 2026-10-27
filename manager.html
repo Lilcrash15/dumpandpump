@@ -122,7 +122,7 @@
                 <button class="active" data-tab="employees">👥 Employees</button>
                 <button data-tab="commission">💸 Commission</button>
                 <button data-tab="shiftnote">📋 Shift Note</button>
-                <button data-tab="inventory">🌱 Inventory</button>
+                <button data-tab="inventory">⚙️ Store Controls</button>
                 <button data-tab="transactions">🧾 Transactions</button>
                 <button data-tab="paylog">✅ Payment Log</button>
             </div>
@@ -258,6 +258,26 @@
 
             <!-- INVENTORY -->
             <div class="tab-panel" data-panel="inventory">
+                <div class="content-block">
+                    <div class="panel-head">
+                        <div>
+                            <h2>Buy Trash</h2>
+                            <p>Turn off to stop employees from buying trash from customers. Takes effect on every open POS right away.</p>
+                        </div>
+                    </div>
+                    <label class="toggle-row" for="buy-trash-toggle">
+                        <span class="toggle">
+                            <input type="checkbox" id="buy-trash-toggle" disabled>
+                            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                        </span>
+                        <span>
+                            <strong id="buy-trash-state-label">Loading...</strong>
+                            <span class="muted" id="buy-trash-state-meta" style="display:block; font-size:.82rem;"></span>
+                        </span>
+                    </label>
+                    <p id="buy-trash-toggle-status" class="status-text" style="margin-top:10px;"></p>
+                </div>
+
                 <div class="content-block">
                     <div class="panel-head">
                         <div>

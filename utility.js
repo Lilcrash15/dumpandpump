@@ -6,6 +6,8 @@ const MANAGER_SESSION_KEY = 'isManagerAccessGranted_PumpDump';
 // Shift note lives in one Firestore doc: pd_settings / shiftNote
 const SHIFT_NOTE_COLLECTION = 'pd_settings';
 const SHIFT_NOTE_DOC = 'shiftNote';
+// Manager on/off switches live in: pd_settings / features
+const FEATURES_DOC = 'features';
 const SHIFT_NOTE_MIN_SIZE = 12;
 const SHIFT_NOTE_MAX_SIZE = 36;
 

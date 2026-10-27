@@ -693,7 +693,63 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        // ===== STORE CONTROLS: BUY TRASH ON/OFF =====
+        const buyTrashToggle = document.getElementById('buy-trash-toggle');
+        const buyTrashLabel = document.getElementById('buy-trash-state-label');
+        const buyTrashMeta = document.getElementById('buy-trash-state-meta');
+        const buyTrashStatus = document.getElementById('buy-trash-toggle-status');
+        const featuresRef = () => firestore.doc(db, SHIFT_NOTE_COLLECTION, FEATURES_DOC);
+
+        function showBuyTrashState(data) {
+            const enabled = data?.buyTrashEnabled !== false; // missing = on
+            buyTrashToggle.checked = enabled;
+            buyTrashLabel.textContent = enabled ? 'Buying trash is ON' : 'Buying trash is OFF';
+            buyTrashLabel.className = enabled ? 'text-ok' : 'text-err';
+            const when = formatTimestamp(data?.buyTrashUpdatedAt);
+            buyTrashMeta.textContent = data?.buyTrashUpdatedBy
+                ? `Last changed by ${data.buyTrashUpdatedBy}${when ? ' · ' + when : ''}`
+                : 'Employees can buy trash from customers.';
+        }
+
+        async function loadBuyTrashSetting() {
+            if (!buyTrashToggle) return;
+            try {
+                const snap = await firestore.getDoc(featuresRef());
+                showBuyTrashState(snap.exists() ? snap.data() : null);
+                buyTrashToggle.disabled = false;
+            } catch (e) {
+                console.error('Error loading store controls:', e);
+                buyTrashLabel.textContent = 'Could not load setting';
+                buyTrashLabel.className = 'text-err';
+                setStatus(buyTrashStatus, 'Check the Firestore rules allow the pd_settings collection.', 'err');
+            }
+        }
+
+        buyTrashToggle?.addEventListener('change', async () => {
+            const enabled = buyTrashToggle.checked;
+            buyTrashToggle.disabled = true;
+            setStatus(buyTrashStatus, 'Saving...');
+            try {
+                const data = {
+                    buyTrashEnabled: enabled,
+                    buyTrashUpdatedBy: localStorage.getItem('loggedInEmployeeName') || 'Manager',
+                    buyTrashUpdatedAt: firestore.serverTimestamp()
+                };
+                await firestore.setDoc(featuresRef(), data, { merge: true });
+                showBuyTrashState({ ...data, buyTrashUpdatedAt: new Date() });
+                setStatus(buyTrashStatus, enabled ? '✅ Buying trash turned on.' : '⛔ Buying trash turned off.', 'ok');
+                setTimeout(() => setStatus(buyTrashStatus, ''), 3000);
+            } catch (e) {
+                console.error('Error saving store controls:', e);
+                buyTrashToggle.checked = !enabled;
+                setStatus(buyTrashStatus, 'Error saving. Try again.', 'err');
+            } finally {
+                buyTrashToggle.disabled = false;
+            }
+        });
+
         // Auto-load everything
+        loadBuyTrashSetting();
         loadAndRenderEmployees();
         loadCommissionSummary();
         loadCurrentShiftNote();

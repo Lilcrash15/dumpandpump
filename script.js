@@ -221,7 +221,45 @@ document.addEventListener('DOMContentLoaded', () => {
             updatePosTotal();
             updateBuySellTotal();
             startShiftNoteListener();
+            startFeatureListener();
             checkScrollVisibility();
+        }
+
+        // ===== MANAGER ON/OFF SWITCHES (pd_settings/features) =====
+        let buyTrashEnabled = true; // missing setting = on
+        let featureListenerStarted = false;
+        const BUY_TRASH_LABEL = showBuySellBtn ? showBuySellBtn.textContent : '🗑️ Buy Trash';
+
+        function applyFeatures(data) {
+            const wasEnabled = buyTrashEnabled;
+            buyTrashEnabled = data?.buyTrashEnabled !== false;
+            if (!showBuySellBtn) return;
+            showBuySellBtn.classList.toggle('feature-off', !buyTrashEnabled);
+            showBuySellBtn.textContent = buyTrashEnabled ? BUY_TRASH_LABEL : '🗑️ Buy Trash (Off)';
+            showBuySellBtn.title = buyTrashEnabled ? '' : 'A manager has turned off buying trash';
+
+            // Turned off while someone is on the Buy Trash screen: send them back to selling
+            if (wasEnabled && !buyTrashEnabled && buySellView.style.display !== 'none') {
+                resetBuySellCart();
+                setStatus(buySellStatus, '');
+                showPosBtn.click();
+                setStatus(posStatusMsg, '⛔ A manager turned off buying trash.', 'err');
+            }
+        }
+
+        function startFeatureListener() {
+            if (featureListenerStarted) return;
+            featureListenerStarted = true;
+            const ref = firestore.doc(db, SHIFT_NOTE_COLLECTION, FEATURES_DOC);
+            if (typeof firestore.onSnapshot === 'function') {
+                firestore.onSnapshot(ref,
+                    snap => applyFeatures(snap.exists() ? snap.data() : null),
+                    err => console.warn("Store controls listener error:", err));
+            } else {
+                firestore.getDoc(ref)
+                    .then(snap => applyFeatures(snap.exists() ? snap.data() : null))
+                    .catch(err => console.warn("Could not load store controls:", err));
+            }
         }
 
         // ===== SHIFT NOTE =====
@@ -535,6 +573,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         buySellCheckoutBtn?.addEventListener('click', async () => {
+            if (!buyTrashEnabled) { setStatus(buySellStatus, '⛔ Buying trash is turned off by a manager.', 'err'); return; }
             if (Object.keys(buySellCart).length === 0) { setStatus(buySellStatus, 'Nothing to log yet.', 'err'); return; }
             const empName = currentEmployee?.fullName || localStorage.getItem('loggedInEmployeeName') || 'Unknown';
             const empId = currentEmployee?.id || localStorage.getItem('loggedInEmployeeId') || '';
@@ -587,6 +626,10 @@ document.addEventListener('DOMContentLoaded', () => {
             checkScrollVisibility();
         });
         showBuySellBtn?.addEventListener('click', () => {
+            if (!buyTrashEnabled) {
+                setStatus(posStatusMsg, '⛔ Buying trash is currently turned off by a manager.', 'err');
+                return;
+            }
             posView.style.display = 'none';
             buySellView.style.display = '';
             showBuySellBtn.classList.add('active');
